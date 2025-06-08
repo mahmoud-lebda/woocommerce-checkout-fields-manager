@@ -1,0 +1,451 @@
+/* ==========================================================================
+   WooCommerce Checkout Fields Manager - Frontend Styles
+   ========================================================================== */
+
+/* Custom Fields Styling */
+.wcfm-custom-field {
+    margin-bottom: 20px;
+}
+
+.wcfm-custom-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+}
+
+.wcfm-custom-field label .required {
+    color: #e74c3c;
+    text-decoration: none;
+}
+
+.wcfm-custom-field input,
+.wcfm-custom-field textarea,
+.wcfm-custom-field select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.wcfm-custom-field input:focus,
+.wcfm-custom-field textarea:focus,
+.wcfm-custom-field select:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+.wcfm-custom-field.error input,
+.wcfm-custom-field.error textarea,
+.wcfm-custom-field.error select {
+    border-color: #e74c3c;
+}
+
+.wcfm-custom-field .field-description {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+/* Field Types */
+.wcfm-field-checkbox input,
+.wcfm-field-radio input {
+    width: auto;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.wcfm-field-checkbox label,
+.wcfm-field-radio label {
+    display: inline;
+    margin-left: 5px;
+    font-weight: normal;
+}
+
+.wcfm-field-date input {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="%23999" d="M11 3V1h-1v2H6V1H5v2H1v12h14V3h-4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+.wcfm-field-number input {
+    text-align: right;
+}
+
+.wcfm-field-tel input {
+    direction: ltr;
+}
+
+/* Field Validation */
+.wcfm-field-error {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+}
+
+.wcfm-field-valid input,
+.wcfm-field-valid textarea,
+.wcfm-field-valid select {
+    border-color: #27ae60;
+}
+
+.wcfm-field-invalid input,
+.wcfm-field-invalid textarea,
+.wcfm-field-invalid select {
+    border-color: #e74c3c;
+}
+
+/* Conditional Fields */
+.wcfm-field-hidden {
+    display: none !important;
+}
+
+.wcfm-field-conditional {
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.wcfm-field-conditional.wcfm-field-active {
+    opacity: 1;
+}
+
+/* Tooltips */
+.wcfm-tooltip {
+    position: relative;
+    display: inline-block;
+    margin-left: 5px;
+    cursor: help;
+}
+
+.wcfm-tooltip .dashicons {
+    font-size: 14px;
+    color: #666;
+}
+
+.wcfm-tooltip:hover .dashicons {
+    color: #0073aa;
+}
+
+.wcfm-tooltip .tooltip-content {
+    visibility: hidden;
+    width: 200px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 8px 12px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.wcfm-tooltip .tooltip-content::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+.wcfm-tooltip:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Loading States */
+.wcfm-field-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.wcfm-field-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    border: 2px solid #ccc;
+    border-top-color: #0073aa;
+    border-radius: 50%;
+    animation: wcfm-spin 1s linear infinite;
+}
+
+@keyframes wcfm-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Product Type Specific Styles */
+.wcfm-virtual-only .shipping_address,
+.wcfm-downloadable-only .shipping_address {
+    display: none;
+}
+
+.wcfm-virtual-only .billing_address_1,
+.wcfm-virtual-only .billing_address_2,
+.wcfm-virtual-only .billing_city,
+.wcfm-virtual-only .billing_postcode,
+.wcfm-virtual-only .billing_state,
+.wcfm-virtual-only .billing_country {
+    display: none;
+}
+
+/* Block Checkout Specific */
+.wcfm-block-checkout .wp-block-woocommerce-checkout-fields-block {
+    margin-bottom: 20px;
+}
+
+.wcfm-block-checkout .wc-block-checkout__form .wcfm-custom-field {
+    margin-bottom: 16px;
+}
+
+.wcfm-block-checkout .wc-block-checkout__form .wcfm-custom-field label {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.wcfm-block-checkout .wc-block-checkout__form .wcfm-custom-field input,
+.wcfm-block-checkout .wc-block-checkout__form .wcfm-custom-field textarea,
+.wcfm-block-checkout .wc-block-checkout__form .wcfm-custom-field select {
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+/* Classic Checkout Specific */
+.wcfm-classic-checkout .woocommerce-checkout .wcfm-custom-field {
+    clear: both;
+    margin-bottom: 20px;
+}
+
+.wcfm-classic-checkout .form-row.wcfm-custom-field {
+    width: 100%;
+}
+
+.wcfm-classic-checkout .form-row-first.wcfm-custom-field {
+    width: 48%;
+    float: left;
+    margin-right: 2%;
+}
+
+.wcfm-classic-checkout .form-row-last.wcfm-custom-field {
+    width: 48%;
+    float: right;
+    margin-left: 2%;
+}
+
+/* Order Summary Custom Fields */
+.wcfm-custom-fields {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.wcfm-custom-fields h2,
+.wcfm-custom-fields h3 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.wcfm-custom-fields .woocommerce-table {
+    margin: 0;
+}
+
+.wcfm-custom-fields .woocommerce-table th {
+    font-weight: 600;
+    width: 30%;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.wcfm-custom-fields .woocommerce-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Field Groups */
+.wcfm-field-group {
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: #fafafa;
+}
+
+.wcfm-field-group h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #333;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.wcfm-field-group .wcfm-custom-field {
+    margin-bottom: 15px;
+}
+
+.wcfm-field-group .wcfm-custom-field:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .wcfm-custom-field input,
+    .wcfm-custom-field textarea,
+    .wcfm-custom-field select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        padding: 15px 12px;
+    }
+    
+    .wcfm-classic-checkout .form-row-first.wcfm-custom-field,
+    .wcfm-classic-checkout .form-row-last.wcfm-custom-field {
+        width: 100%;
+        float: none;
+        margin: 0 0 20px 0;
+    }
+    
+    .wcfm-tooltip .tooltip-content {
+        width: 150px;
+        margin-left: -75px;
+    }
+    
+    .wcfm-custom-fields .woocommerce-table th,
+    .wcfm-custom-fields .woocommerce-table td {
+        padding: 8px;
+        font-size: 14px;
+    }
+    
+    .wcfm-custom-fields .woocommerce-table th {
+        width: 40%;
+    }
+}
+
+@media (max-width: 480px) {
+    .wcfm-custom-field label {
+        font-size: 14px;
+    }
+    
+    .wcfm-custom-field .field-description {
+        font-size: 11px;
+    }
+    
+    .wcfm-field-group {
+        padding: 15px;
+    }
+    
+    .wcfm-tooltip .tooltip-content {
+        width: 120px;
+        margin-left: -60px;
+        font-size: 11px;
+    }
+}
+
+/* Accessibility */
+.wcfm-custom-field:focus-within label {
+    color: #0073aa;
+}
+
+.wcfm-custom-field input:focus,
+.wcfm-custom-field textarea:focus,
+.wcfm-custom-field select:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .wcfm-custom-field input,
+    .wcfm-custom-field textarea,
+    .wcfm-custom-field select {
+        border-width: 2px;
+    }
+    
+    .wcfm-custom-field input:focus,
+    .wcfm-custom-field textarea:focus,
+    .wcfm-custom-field select:focus {
+        border-color: #000;
+        box-shadow: none;
+        outline: 3px solid #000;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .wcfm-custom-field input,
+    .wcfm-custom-field textarea,
+    .wcfm-custom-field select,
+    .wcfm-field-conditional,
+    .wcfm-tooltip .tooltip-content {
+        transition: none;
+    }
+    
+    .wcfm-field-loading::after {
+        animation: none;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .wcfm-tooltip,
+    .wcfm-field-loading::after {
+        display: none;
+    }
+    
+    .wcfm-custom-field input,
+    .wcfm-custom-field textarea,
+    .wcfm-custom-field select {
+        border: 1px solid #000;
+        background: transparent;
+    }
+}
+
+/* RTL Support */
+[dir="rtl"] .wcfm-field-date input {
+    background-position: left 12px center;
+    padding-left: 40px;
+    padding-right: 12px;
+}
+
+[dir="rtl"] .wcfm-field-tel input {
+    direction: rtl;
+}
+
+[dir="rtl"] .wcfm-tooltip {
+    margin-left: 0;
+    margin-right: 5px;
+}
+
+[dir="rtl"] .wcfm-field-loading::after {
+    right: auto;
+    left: 12px;
+}
+
+[dir="rtl"] .wcfm-classic-checkout .form-row-first.wcfm-custom-field {
+    float: right;
+    margin-right: 0;
+    margin-left: 2%;
+}
+
+[dir="rtl"] .wcfm-classic-checkout .form-row-last.wcfm-custom-field {
+    float: left;
+    margin-left: 0;
+    margin-right: 2%;
+}

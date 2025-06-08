@@ -1,0 +1,574 @@
+/* ==========================================================================
+   WooCommerce Checkout Fields Manager - Admin Styles
+   ========================================================================== */
+
+/* Admin Header */
+.wcfm-admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.wcfm-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #666;
+}
+
+.wcfm-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Navigation Tabs */
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+}
+
+.nav-tab {
+    position: relative;
+}
+
+.nav-tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #0073aa;
+}
+
+/* Fields Manager */
+.wcfm-fields-manager {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.wcfm-section-header {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.wcfm-section-header h2 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.wcfm-section-header p {
+    margin: 0;
+    color: #666;
+    font-style: italic;
+}
+
+/* Fields Table */
+.wcfm-fields-table-wrapper {
+    overflow-x: auto;
+}
+
+.wcfm-fields-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.wcfm-fields-table th {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.wcfm-fields-table td {
+    border: 1px solid #ddd;
+    padding: 12px 8px;
+    vertical-align: middle;
+}
+
+.wcfm-fields-table tbody tr:hover {
+    background: #f9f9f9;
+}
+
+.wcfm-field-row.ui-sortable-helper {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Field Sort Handle */
+.wcfm-field-sort {
+    width: 40px;
+    text-align: center;
+    cursor: move;
+}
+
+.wcfm-field-sort .dashicons {
+    color: #999;
+    cursor: move;
+}
+
+.wcfm-field-sort:hover .dashicons {
+    color: #0073aa;
+}
+
+/* Field Name */
+.wcfm-field-name {
+    width: 200px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+/* Field Label */
+.wcfm-field-label input {
+    width: 100%;
+    min-width: 200px;
+}
+
+/* Toggle Switches */
+.wcfm-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.wcfm-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.wcfm-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 24px;
+    transition: .4s;
+}
+
+.wcfm-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+}
+
+input:checked + .wcfm-slider {
+    background-color: #0073aa;
+}
+
+input:checked + .wcfm-slider:before {
+    transform: translateX(26px);
+}
+
+/* Priority Input */
+.wcfm-field-priority input {
+    width: 60px;
+}
+
+/* Rules Manager */
+.wcfm-rules-manager {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+}
+
+.wcfm-rules-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.wcfm-rules-section h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+}
+
+.wcfm-rules-section .form-table th {
+    width: 200px;
+    font-weight: 600;
+}
+
+/* Custom Fields Manager */
+.wcfm-custom-fields-manager {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+}
+
+#wcfm-custom-fields-list {
+    margin-top: 20px;
+}
+
+.wcfm-custom-field-row {
+    border-bottom: 1px solid #eee;
+}
+
+.wcfm-custom-field-row:last-child {
+    border-bottom: none;
+}
+
+.wcfm-field-actions {
+    white-space: nowrap;
+}
+
+.wcfm-field-actions .button {
+    margin-right: 5px;
+}
+
+.wcfm-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.wcfm-status.enabled {
+    background: #d4edda;
+    color: #155724;
+}
+
+.wcfm-status.disabled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.wcfm-required {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 2px 6px;
+    background: #ffeaa7;
+    color: #b7791f;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Modal Styles */
+.wcfm-modal {
+    position: fixed;
+    z-index: 100000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wcfm-modal-content {
+    background-color: #fff;
+    border-radius: 4px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.wcfm-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.wcfm-modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.wcfm-modal-close {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #999;
+    line-height: 1;
+}
+
+.wcfm-modal-close:hover {
+    color: #333;
+}
+
+.wcfm-modal-body {
+    padding: 20px;
+}
+
+.wcfm-modal-footer {
+    padding: 20px;
+    border-top: 1px solid #ddd;
+    text-align: right;
+}
+
+.wcfm-modal-footer .button {
+    margin-left: 10px;
+}
+
+/* Field Options */
+.field-options-row {
+    display: none;
+}
+
+.field-options-row.show {
+    display: table-row;
+}
+
+/* Save Actions */
+.wcfm-save-actions {
+    position: fixed;
+    bottom: 0;
+    left: 160px;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #ddd;
+    padding: 15px 20px;
+    z-index: 1000;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 782px) {
+    .wcfm-save-actions {
+        left: 0;
+    }
+}
+
+.wcfm-save-actions .spinner {
+    float: none;
+    margin: 0 10px;
+    visibility: hidden;
+}
+
+.wcfm-save-actions .spinner.is-active {
+    visibility: visible;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .wcfm-admin-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .wcfm-actions {
+        justify-content: center;
+    }
+    
+    .wcfm-fields-table th,
+    .wcfm-fields-table td {
+        padding: 8px 4px;
+        font-size: 13px;
+    }
+    
+    .wcfm-field-label input {
+        min-width: 150px;
+    }
+    
+    .wcfm-modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+}
+
+/* Drag and Drop */
+.ui-sortable-placeholder {
+    background: #f0f0f0;
+    border: 2px dashed #ccc;
+    height: 50px;
+    visibility: visible !important;
+}
+
+.ui-sortable-helper {
+    opacity: 0.8;
+}
+
+/* Tooltips */
+.wcfm-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.wcfm-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+.wcfm-tooltip:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+
+/* Success/Error Messages */
+.wcfm-message {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 10px 0;
+    border-left: 4px solid;
+}
+
+.wcfm-message.success {
+    background: #d4edda;
+    color: #155724;
+    border-left-color: #28a745;
+}
+
+.wcfm-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left-color: #dc3545;
+}
+
+/* Loading States */
+.wcfm-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.wcfm-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #ccc;
+    border-top-color: #0073aa;
+    border-radius: 50%;
+    animation: wcfm-spin 1s linear infinite;
+}
+
+@keyframes wcfm-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Export/Import */
+.wcfm-export-import {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.wcfm-export-import h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+/* Field Preview */
+.wcfm-field-preview {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    background: #f9f9f9;
+    margin-top: 15px;
+}
+
+.wcfm-field-preview label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.wcfm-field-preview input,
+.wcfm-field-preview textarea,
+.wcfm-field-preview select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Custom Field Types */
+.wcfm-field-type-options {
+    margin-top: 10px;
+    padding: 15px;
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.wcfm-field-type-options label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: normal;
+}
+
+/* Conditional Logic */
+.wcfm-conditional-logic {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 15px;
+    background: #fff;
+}
+
+.wcfm-conditional-rule {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.wcfm-conditional-rule select,
+.wcfm-conditional-rule input {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.wcfm-remove-rule {
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.wcfm-remove-rule:hover {
+    color: #a71e2a;
+}
