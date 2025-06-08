@@ -1,352 +1,232 @@
 /**
- * WooCommerce Blocks Integration for WCFM
- * This file handles the integration with WooCommerce Block Checkout
+ * Simplified WooCommerce Blocks Integration for WCFM
+ * This approach directly manipulates the DOM which is more reliable for Block Checkout
  */
 
 (function() {
     'use strict';
 
-    // Check if we're in a block checkout environment
-    if (typeof wp === 'undefined' || !wp.hooks || typeof wcfmBlocksSettings === 'undefined') {
+    console.log('WCFM Blocks Integration loaded');
+
+    // Check if we have the settings
+    if (typeof wcfmBlocksSettings === 'undefined') {
+        console.log('WCFM: Block settings not available');
         return;
     }
 
-    const { addFilter, addAction } = wp.hooks;
-    const { __ } = wp.i18n;
+    console.log('WCFM: Block settings loaded', wcfmBlocksSettings);
 
     /**
-     * Modify checkout fields for blocks
+     * Main WCFM Blocks handler
      */
-    addFilter(
-        'woocommerce_blocks_checkout_fields',
-        'wcfm/modify-checkout-fields',
-        function(fields) {
-            if (!wcfmBlocksSettings.fieldSettings) {
-                return fields;
-            }
-
-            const fieldSettings = wcfmBlocksSettings.fieldSettings;
-
-            // Process each field setting
-            Object.keys(fieldSettings).forEach(fieldKey => {
-                const fieldConfig = fieldSettings[fieldKey];
-                const section = fieldConfig.section || 'billing';
-                
-                // Skip if field is disabled
-                if (!fieldConfig.enabled) {
-                    if (fields[section] && fields[section][fieldKey]) {
-                        delete fields[section][fieldKey];
-                    }
-                    return;
-                }
-
-                // Ensure section exists
-                if (!fields[section]) {
-                    fields[section] = {};
-                }
-
-                // Create or modify the field
-                if (!fields[section][fieldKey]) {
-                    fields[section][fieldKey] = {};
-                }
-
-                // Apply field configuration
-                if (fieldConfig.required !== undefined) {
-                    fields[section][fieldKey].required = fieldConfig.required;
-                }
-
-                if (fieldConfig.label) {
-                    fields[section][fieldKey].label = fieldConfig.label;
-                }
-
-                if (fieldConfig.priority !== undefined) {
-                    fields[section][fieldKey].priority = fieldConfig.priority;
-                }
-
-                // Add WCFM specific classes
-                if (!fields[section][fieldKey].class) {
-                    fields[section][fieldKey].class = [];
-                }
-                fields[section][fieldKey].class.push('wcfm-field');
-                fields[section][fieldKey].class.push('wcfm-' + section + '-field');
-            });
-
-            return fields;
-        }
-    );
-
-    /**
-     * Add field validation for block checkout
-     */
-    addFilter(
-        'woocommerce_blocks_checkout_field_validation',
-        'wcfm/validate-checkout-fields',
-        function(result, fieldKey, fieldValue, fieldConfig) {
-            if (!wcfmBlocksSettings.fieldSettings) {
-                return result;
-            }
-
-            const fieldSettings = wcfmBlocksSettings.fieldSettings[fieldKey];
+    const WCFMBlocks = {
+        
+        init: function() {
+            console.log('WCFM Blocks: Initializing...');
             
-            if (!fieldSettings) {
-                return result;
-            }
+            // Apply field modifications immediately and periodically
+            this.applyFieldModifications();
+            
+            // Watch for DOM changes (block checkout loads dynamically)
+            this.watchForChanges();
+            
+            // Apply modifications every 2 seconds for dynamic loading
+            setInterval(() => {
+                this.applyFieldModifications();
+            }, 2000);
+        },
 
-            // Required field validation
-            if (fieldSettings.required && (!fieldValue || fieldValue.trim() === '')) {
-                return {
-                    isValid: false,
-                    message: wcfmBlocksSettings.strings.required_field_error
-                };
-            }
-
-            // Email validation
-            if (fieldKey.includes('email') && fieldValue && !isValidEmail(fieldValue)) {
-                return {
-                    isValid: false,
-                    message: wcfmBlocksSettings.strings.invalid_email
-                };
-            }
-
-            // Phone validation
-            if (fieldKey.includes('phone') && fieldValue && !isValidPhone(fieldValue)) {
-                return {
-                    isValid: false,
-                    message: wcfmBlocksSettings.strings.invalid_phone
-                };
-            }
-
-            return result;
-        }
-    );
-
-    /**
-     * Handle field visibility based on settings
-     */
-    addAction(
-        'woocommerce_blocks_checkout_form_rendered',
-        'wcfm/handle-field-visibility',
-        function() {
+        applyFieldModifications: function() {
             if (!wcfmBlocksSettings.fieldSettings) {
                 return;
             }
 
             const fieldSettings = wcfmBlocksSettings.fieldSettings;
+            let modificationsApplied = 0;
 
-            // Apply field visibility settings
+            console.log('WCFM: Applying field modifications...');
+
             Object.keys(fieldSettings).forEach(fieldKey => {
-                const fieldConfig = fieldSettings[fieldKey];
-                const fieldElement = document.querySelector(`[name="${fieldKey}"]`);
+                const config = fieldSettings[fieldKey];
                 
-                if (fieldElement) {
-                    const fieldWrapper = fieldElement.closest('.wc-block-components-text-input') || 
-                                        fieldElement.closest('.wc-block-components-form-row');
-                    
-                    if (fieldWrapper) {
-                        if (!fieldConfig.enabled) {
-                            fieldWrapper.style.display = 'none';
-                            fieldWrapper.classList.add('wcfm-field-hidden');
-                        } else {
-                            fieldWrapper.style.display = '';
-                            fieldWrapper.classList.remove('wcfm-field-hidden');
-                            fieldWrapper.classList.add('wcfm-field-enabled');
-                        }
-
-                        // Add required indicator
-                        if (fieldConfig.required) {
-                            fieldWrapper.classList.add('wcfm-field-required');
-                            const label = fieldWrapper.querySelector('label');
-                            if (label && !label.querySelector('.required')) {
-                                label.innerHTML += ' <span class="required">*</span>';
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    );
-
-    /**
-     * Handle product type rules for block checkout
-     */
-    addAction(
-        'woocommerce_blocks_checkout_cart_changed',
-        'wcfm/handle-product-type-rules',
-        function(cartData) {
-            // This would handle cart changes and apply product type rules
-            // For now, we'll keep it simple and rely on server-side handling
-        }
-    );
-
-    /**
-     * Extend the checkout data with our custom fields
-     */
-    addFilter(
-        'woocommerce_blocks_checkout_submit_data',
-        'wcfm/extend-checkout-data',
-        function(checkoutData) {
-            if (!wcfmBlocksSettings.fieldSettings) {
-                return checkoutData;
-            }
-
-            // Initialize extensions if not exists
-            if (!checkoutData.extensions) {
-                checkoutData.extensions = {};
-            }
-
-            if (!checkoutData.extensions.wcfm) {
-                checkoutData.extensions.wcfm = {};
-            }
-
-            // Collect additional field values
-            const fieldSettings = wcfmBlocksSettings.fieldSettings;
-            
-            Object.keys(fieldSettings).forEach(fieldKey => {
-                const fieldConfig = fieldSettings[fieldKey];
+                // Find the field in various possible ways
+                const field = this.findField(fieldKey);
                 
-                if (fieldConfig.enabled && fieldConfig.section === 'additional') {
-                    const fieldElement = document.querySelector(`[name="${fieldKey}"]`);
+                if (field) {
+                    console.log(`WCFM: Found field ${fieldKey}`, config);
                     
-                    if (fieldElement && fieldElement.value) {
-                        checkoutData.extensions.wcfm[fieldKey] = fieldElement.value;
+                    // Apply modifications
+                    if (this.modifyField(field, fieldKey, config)) {
+                        modificationsApplied++;
                     }
+                } else {
+                    console.log(`WCFM: Field ${fieldKey} not found in DOM`);
                 }
             });
 
-            return checkoutData;
-        }
-    );
+            if (modificationsApplied > 0) {
+                console.log(`WCFM: Applied modifications to ${modificationsApplied} fields`);
+            }
+        },
 
-    /**
-     * Initialize field enhancements after blocks are loaded
-     */
-    addAction(
-        'woocommerce_blocks_checkout_loaded',
-        'wcfm/initialize-field-enhancements',
-        function() {
-            // Add any additional field enhancements here
-            initFieldEnhancements();
-        }
-    );
+        findField: function(fieldKey) {
+            // Multiple strategies to find the field
+            const selectors = [
+                `input[name="${fieldKey}"]`,
+                `textarea[name="${fieldKey}"]`,
+                `select[name="${fieldKey}"]`,
+                `input[id="${fieldKey}"]`,
+                `textarea[id="${fieldKey}"]`,
+                `select[id="${fieldKey}"]`,
+                `input[name*="${fieldKey}"]`,
+                `#${fieldKey}`,
+                `.wc-block-components-text-input input[name*="${fieldKey.replace('billing_', '').replace('shipping_', '')}"]`,
+                `.wc-block-components-text-input input[id*="${fieldKey.replace('billing_', '').replace('shipping_', '')}"]`
+            ];
 
-    /**
-     * Initialize field enhancements
-     */
-    function initFieldEnhancements() {
-        // Add custom CSS classes to the checkout form
-        const checkoutForm = document.querySelector('.wc-block-checkout__form');
-        if (checkoutForm) {
-            checkoutForm.classList.add('wcfm-block-checkout');
-        }
+            for (const selector of selectors) {
+                const field = document.querySelector(selector);
+                if (field) {
+                    return field;
+                }
+            }
 
-        // Apply field-specific enhancements
-        setTimeout(() => {
-            applyFieldEnhancements();
-        }, 500);
-    }
+            return null;
+        },
 
-    /**
-     * Apply field enhancements
-     */
-    function applyFieldEnhancements() {
-        if (!wcfmBlocksSettings.fieldSettings) {
-            return;
-        }
-
-        const fieldSettings = wcfmBlocksSettings.fieldSettings;
-
-        Object.keys(fieldSettings).forEach(fieldKey => {
-            const fieldConfig = fieldSettings[fieldKey];
-            const fieldElement = document.querySelector(`[name="${fieldKey}"]`);
+        modifyField: function(field, fieldKey, config) {
+            const wrapper = field.closest('.wc-block-components-text-input, .wc-block-components-form-row, .wp-block-woocommerce-checkout-contact-information-block, .wp-block-woocommerce-checkout-billing-address-block, .wp-block-woocommerce-checkout-shipping-address-block');
             
-            if (fieldElement && fieldConfig.enabled) {
-                // Add field-specific classes
-                fieldElement.classList.add('wcfm-field');
-                fieldElement.classList.add(`wcfm-${fieldKey}`);
+            if (!wrapper) {
+                console.log(`WCFM: No wrapper found for ${fieldKey}`);
+                return false;
+            }
 
-                // Apply required state
-                if (fieldConfig.required) {
-                    fieldElement.setAttribute('required', 'required');
-                    fieldElement.setAttribute('aria-required', 'true');
+            let modified = false;
+
+            // Handle field visibility
+            if (!config.enabled) {
+                wrapper.style.display = 'none';
+                wrapper.classList.add('wcfm-field-hidden');
+                console.log(`WCFM: Hidden field ${fieldKey}`);
+                modified = true;
+            } else {
+                wrapper.style.display = '';
+                wrapper.classList.remove('wcfm-field-hidden');
+                wrapper.classList.add('wcfm-field-enabled');
+
+                // Handle required state
+                if (config.required) {
+                    field.setAttribute('required', 'required');
+                    field.setAttribute('aria-required', 'true');
+                    wrapper.classList.add('wcfm-field-required');
+
+                    // Add required indicator to label
+                    const label = wrapper.querySelector('label');
+                    if (label && !label.querySelector('.required')) {
+                        label.innerHTML += ' <span class="required" style="color: #e74c3c;">*</span>';
+                    }
+                    console.log(`WCFM: Made field ${fieldKey} required`);
+                    modified = true;
+                } else {
+                    field.removeAttribute('required');
+                    field.setAttribute('aria-required', 'false');
+                    wrapper.classList.remove('wcfm-field-required');
+                    
+                    // Remove required indicator
+                    const requiredSpan = wrapper.querySelector('label .required');
+                    if (requiredSpan) {
+                        requiredSpan.remove();
+                    }
                 }
 
-                // Add validation attributes
-                if (fieldKey.includes('email')) {
-                    fieldElement.setAttribute('type', 'email');
-                }
-
-                if (fieldKey.includes('phone')) {
-                    fieldElement.setAttribute('type', 'tel');
-                }
-
-                // Apply custom label if provided
-                if (fieldConfig.label) {
-                    const label = document.querySelector(`label[for="${fieldKey}"]`);
+                // Handle custom label
+                if (config.label) {
+                    const label = wrapper.querySelector('label');
                     if (label) {
-                        label.textContent = fieldConfig.label;
-                        if (fieldConfig.required) {
-                            label.innerHTML += ' <span class="required">*</span>';
+                        const requiredSpan = label.querySelector('.required');
+                        label.textContent = config.label;
+                        if (requiredSpan) {
+                            label.appendChild(requiredSpan);
                         }
+                        console.log(`WCFM: Updated label for ${fieldKey} to: ${config.label}`);
+                        modified = true;
                     }
                 }
+
+                // Add WCFM classes
+                field.classList.add('wcfm-field');
+                field.classList.add(`wcfm-${fieldKey.replace(/_/g, '-')}`);
+                wrapper.classList.add('wcfm-field-wrapper');
             }
-        });
-    }
 
-    /**
-     * Email validation helper
-     */
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
+            return modified;
+        },
 
-    /**
-     * Phone validation helper
-     */
-    function isValidPhone(phone) {
-        const cleanedPhone = phone.replace(/[^0-9+\-\(\)\s]/g, '');
-        return cleanedPhone.length >= 10;
-    }
+        watchForChanges: function() {
+            // Watch for new elements being added to the DOM
+            const observer = new MutationObserver((mutations) => {
+                let shouldUpdate = false;
+                
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === 1) { // Element node
+                                const hasInput = node.querySelector && (
+                                    node.querySelector('input') || 
+                                    node.querySelector('textarea') || 
+                                    node.querySelector('select') ||
+                                    node.matches('input, textarea, select')
+                                );
+                                
+                                if (hasInput) {
+                                    shouldUpdate = true;
+                                }
+                            }
+                        });
+                    }
+                });
 
-    /**
-     * Observe DOM changes for dynamic field updates
-     */
-    function observeFieldChanges() {
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList') {
-                    // Re-apply enhancements to new fields
-                    applyFieldEnhancements();
+                if (shouldUpdate) {
+                    console.log('WCFM: DOM changed, reapplying modifications...');
+                    setTimeout(() => {
+                        this.applyFieldModifications();
+                    }, 500);
                 }
             });
-        });
 
-        const checkoutContainer = document.querySelector('.wc-block-checkout');
-        if (checkoutContainer) {
-            observer.observe(checkoutContainer, {
-                childList: true,
-                subtree: true
-            });
+            // Start observing
+            const checkoutContainer = document.querySelector('.wp-block-woocommerce-checkout, .wc-block-checkout');
+            if (checkoutContainer) {
+                observer.observe(checkoutContainer, {
+                    childList: true,
+                    subtree: true
+                });
+                console.log('WCFM: Started watching for DOM changes');
+            } else {
+                console.log('WCFM: Checkout container not found for observation');
+            }
         }
+    };
+
+    // Initialize when DOM is ready
+    function initWCFM() {
+        console.log('WCFM: DOM ready, initializing...');
+        WCFMBlocks.init();
     }
 
-    /**
-     * Initialize when DOM is ready
-     */
-    function init() {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                initFieldEnhancements();
-                observeFieldChanges();
-            });
-        } else {
-            initFieldEnhancements();
-            observeFieldChanges();
-        }
+    // Multiple initialization methods
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWCFM);
+    } else {
+        initWCFM();
     }
 
-    // Initialize the integration
-    init();
+    // Also try to initialize after a delay (for dynamic loading)
+    setTimeout(initWCFM, 1000);
+    setTimeout(initWCFM, 3000);
+
+    // Global access for debugging
+    window.WCFMBlocks = WCFMBlocks;
 
 })();
