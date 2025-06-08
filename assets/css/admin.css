@@ -32,6 +32,16 @@
 
 .nav-tab {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+}
+
+.nav-tab .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
 }
 
 .nav-tab-active::after {

@@ -74,7 +74,10 @@ class WooCommerce_Checkout_Fields_Manager {
         $this->init_components();
         
         // Load textdomain
-        add_action('init', array($this, 'load_textdomain'));
+        add_action('init', array($this, 'load_textdomain'), 1);
+        
+        // Load textdomain on init
+        add_action('init', array($this, 'load_textdomain'), 1);
         
         // Plugin activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -162,8 +165,18 @@ class WooCommerce_Checkout_Fields_Manager {
      * Plugin activation
      */
     public function activate() {
-        // Set default options
-        $default_options = array(
+        // Create templates directory if it doesn't exist
+        $templates_dir = WCFM_PLUGIN_PATH . 'admin/templates/';
+        if (!file_exists($templates_dir)) {
+            wp_mkdir_p($templates_dir);
+        }
+        
+        // Force create database tables
+        $this->create_tables();
+        
+        // Set default options only if they don't exist
+        if (!get_option('wcfm_settings')) {
+            $default_options = array(
             'billing_fields' => array(
                 'billing_first_name' => array('enabled' => true, 'required' => true, 'priority' => 10),
                 'billing_last_name' => array('enabled' => true, 'required' => true, 'priority' => 20),
@@ -203,10 +216,14 @@ class WooCommerce_Checkout_Fields_Manager {
             ),
         );
         
-        add_option('wcfm_settings', $default_options);
+            add_option('wcfm_settings', $default_options);
+        }
         
-        // Create database table for custom fields if needed
+        // Create database table for custom fields
         $this->create_tables();
+        
+        // Set activation flag
+        update_option('wcfm_activated', true);
     }
     
     /**
@@ -224,39 +241,45 @@ class WooCommerce_Checkout_Fields_Manager {
         
         $table_name = $wpdb->prefix . 'wcfm_custom_fields';
         
-        // Check if table already exists
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") !== $table_name) {
-            $charset_collate = $wpdb->get_charset_collate();
+        // Always try to create the table
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $sql = "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            field_key varchar(100) NOT NULL,
+            field_type varchar(50) NOT NULL,
+            field_section varchar(50) NOT NULL,
+            field_label varchar(255) NOT NULL,
+            field_placeholder varchar(255) DEFAULT '',
+            field_options text,
+            field_enabled tinyint(1) DEFAULT 1,
+            field_required tinyint(1) DEFAULT 0,
+            field_priority int(11) DEFAULT 10,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY field_key (field_key)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        $result = dbDelta($sql);
+        
+        // Log table creation result
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] Database table creation result: ' . print_r($result, true));
             
-            $sql = "CREATE TABLE $table_name (
-                id mediumint(9) NOT NULL AUTO_INCREMENT,
-                field_key varchar(100) NOT NULL,
-                field_type varchar(50) NOT NULL,
-                field_section varchar(50) NOT NULL,
-                field_label varchar(255) NOT NULL,
-                field_placeholder varchar(255) DEFAULT '',
-                field_options text,
-                field_enabled tinyint(1) DEFAULT 1,
-                field_required tinyint(1) DEFAULT 0,
-                field_priority int(11) DEFAULT 10,
-                created_at datetime DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id),
-                UNIQUE KEY field_key (field_key)
-            ) $charset_collate;";
+            // Check if table was created
+            $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name);
+            error_log('[WCFM] Table exists after creation: ' . ($table_exists ? 'YES' : 'NO'));
             
-            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-            dbDelta($sql);
-            
-            // Log table creation
-            if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name) {
-                WCFM_Core::log('Custom fields table created successfully: ' . $table_name);
-            } else {
-                WCFM_Core::log('Failed to create custom fields table: ' . $table_name, 'error');
+            if (!$table_exists) {
+                error_log('[WCFM] Failed to create table. Last error: ' . $wpdb->last_error);
             }
         }
         
         // Update plugin version
         update_option('wcfm_db_version', WCFM_VERSION);
+        
+        return true;
     }
 }
 

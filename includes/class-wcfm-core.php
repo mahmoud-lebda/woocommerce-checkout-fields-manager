@@ -87,14 +87,17 @@ class WCFM_Core {
      */
     public function enqueue_admin_assets($hook) {
         // Only load on our plugin pages
-        if (strpos($hook, 'wcfm') === false) {
+        if (strpos($hook, 'wcfm') === false && strpos($hook, 'woocommerce_page_wcfm-checkout-fields') === false) {
             return;
         }
+        
+        // Enqueue Dashicons for admin pages
+        wp_enqueue_style('dashicons');
         
         wp_enqueue_style(
             'wcfm-admin-style',
             WCFM_PLUGIN_URL . 'assets/css/admin.css',
-            array(),
+            array('dashicons'),
             WCFM_VERSION
         );
         
@@ -114,6 +117,8 @@ class WCFM_Core {
                 'save_success' => __('Settings saved successfully!', WCFM_TEXT_DOMAIN),
                 'save_error' => __('Error saving settings. Please try again.', WCFM_TEXT_DOMAIN),
                 'confirm_delete' => __('Are you sure you want to delete this field?', WCFM_TEXT_DOMAIN),
+                'confirm_reset' => __('Are you sure you want to reset all settings to defaults?', WCFM_TEXT_DOMAIN),
+                'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', WCFM_TEXT_DOMAIN),
             ),
         ));
     }
@@ -129,7 +134,56 @@ class WCFM_Core {
      * Update plugin settings
      */
     public static function update_settings($settings) {
-        return update_option('wcfm_settings', $settings);
+        // Check if database table exists first
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'wcfm_custom_fields';
+        $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name);
+        
+        if (!$table_exists) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[WCFM Core] Database table missing, attempting to create...');
+            }
+            
+            // Try to create the table
+            $plugin_instance = WooCommerce_Checkout_Fields_Manager::get_instance();
+            if (method_exists($plugin_instance, 'create_tables')) {
+                // Call private method via reflection
+                $reflection = new ReflectionClass($plugin_instance);
+                $method = $reflection->getMethod('create_tables');
+                $method->setAccessible(true);
+                $method->invoke($plugin_instance);
+            }
+        }
+        
+        // Validate settings before saving
+        if (!is_array($settings)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[WCFM Core] Settings must be an array, received: ' . gettype($settings));
+            }
+            return false;
+        }
+        
+        // Get current settings to merge
+        $current_settings = self::get_settings();
+        
+        // Merge with current settings to prevent data loss
+        $merged_settings = array_merge($current_settings, $settings);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM Core] Updating settings with: ' . print_r($merged_settings, true));
+        }
+        
+        $result = update_option('wcfm_settings', $merged_settings);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM Core] Update result: ' . ($result ? 'success' : 'failed'));
+            
+            if (!$result) {
+                error_log('[WCFM Core] WordPress last error: ' . $wpdb->last_error);
+            }
+        }
+        
+        return $result;
     }
     
     /**

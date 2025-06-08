@@ -100,8 +100,58 @@
             var $button = $(this);
             var $spinner = $('.wcfm-save-actions .spinner');
             
-            // Get form data
-            var formData = WCFM_Admin.getFormData();
+            // Collect form data from all visible elements
+            var formElements = [];
+            
+            // Get data from fields tables
+            $('.wcfm-fields-table input, .wcfm-fields-table select').each(function() {
+                if ($(this).attr('name')) {
+                    formElements.push($(this));
+                }
+            });
+            
+            // Get data from rules sections
+            $('.wcfm-rules-manager input[type="checkbox"]').each(function() {
+                if ($(this).attr('name')) {
+                    formElements.push($(this));
+                }
+            });
+            
+            // Get data from any other form elements
+            $('form input, form select, form textarea').each(function() {
+                if ($(this).attr('name')) {
+                    formElements.push($(this));
+                }
+            });
+            
+            // Build form data string
+            var formDataParts = [];
+            
+            formElements.forEach(function($element) {
+                var name = $element.attr('name');
+                var value = '';
+                
+                if ($element.attr('type') === 'checkbox') {
+                    if ($element.is(':checked')) {
+                        value = $element.val() || '1';
+                        formDataParts.push(encodeURIComponent(name) + '=' + encodeURIComponent(value));
+                    }
+                } else if ($element.attr('type') === 'radio') {
+                    if ($element.is(':checked')) {
+                        value = $element.val();
+                        formDataParts.push(encodeURIComponent(name) + '=' + encodeURIComponent(value));
+                    }
+                } else {
+                    value = $element.val();
+                    if (value) {
+                        formDataParts.push(encodeURIComponent(name) + '=' + encodeURIComponent(value));
+                    }
+                }
+            });
+            
+            var formData = formDataParts.join('&');
+            
+            console.log('Form data being sent:', formData);
             
             // Show loading
             $button.prop('disabled', true);
@@ -111,9 +161,10 @@
             $.post(wcfm_admin.ajax_url, {
                 action: 'wcfm_save_settings',
                 nonce: wcfm_admin.nonce,
-                form_data: $.param(formData)
+                form_data: formData
             })
             .done(function(response) {
+                console.log('AJAX Response:', response);
                 if (response.success) {
                     WCFM_Admin.showNotice(response.data, 'success');
                     WCFM_Admin.clearFormDirty();
@@ -121,8 +172,10 @@
                     WCFM_Admin.showNotice(response.data || wcfm_admin.strings.save_error, 'error');
                 }
             })
-            .fail(function() {
-                WCFM_Admin.showNotice(wcfm_admin.strings.save_error, 'error');
+            .fail(function(xhr, status, error) {
+                console.error('AJAX Error:', xhr.responseText);
+                console.error('Status:', status, 'Error:', error);
+                WCFM_Admin.showNotice(wcfm_admin.strings.save_error + ' (' + error + ')', 'error');
             })
             .always(function() {
                 $button.prop('disabled', false);
@@ -784,15 +837,16 @@
     $(document).ready(function() {
         WCFM_Admin.init();
         
-        // Load any existing draft
-        WCFM_Admin.loadDraft();
-        
         // Initialize additional features
         WCFM_Admin.initSearch();
         WCFM_Admin.initFieldPreview();
         WCFM_Admin.initConditionalLogic();
         WCFM_Admin.initKeyboardShortcuts();
-        WCFM_Admin.initAutoSave();
+        // Remove auto-save to prevent draft messages
+        // WCFM_Admin.initAutoSave();
+        
+        // Clear any existing drafts on page load
+        localStorage.removeItem('wcfm_draft_settings');
         
         // Clear draft on successful save
         $(document).on('wcfm_settings_saved', function() {
