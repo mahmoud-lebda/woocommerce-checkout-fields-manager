@@ -27,6 +27,14 @@ define('WCFM_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('WCFM_VERSION', '1.0.0');
 define('WCFM_TEXT_DOMAIN', 'woo-checkout-fields-manager');
 
+// Declare WooCommerce compatibility
+add_action('before_woocommerce_init', function() {
+    if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+    }
+});
+
 /**
  * Main Plugin Class
  */
@@ -59,8 +67,25 @@ class WooCommerce_Checkout_Fields_Manager {
         // Plugin activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+        
+        // Add WooCommerce compatibility checks
+        add_action('init', array($this, 'declare_wc_compatibility'));
     }
     
+    /**
+     * Declare WooCommerce compatibility
+     */
+    public function declare_wc_compatibility() {
+        // Declare HPOS compatibility
+        add_action('before_woocommerce_init', function() {
+            if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+            }
+        });
+    }
+    
+    // باقي الكود كما هو...
     /**
      * Initialize plugin
      */
