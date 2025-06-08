@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Core functionality class
+ * Core functionality class - Enhanced for immediate field hiding
  * 
  * @package WooCommerce_Checkout_Fields_Manager
  */
@@ -58,6 +58,99 @@ class WCFM_Core
         // Enqueue scripts and styles
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+        
+        // Add immediate field hiding CSS - HIGHEST PRIORITY
+        add_action('wp_head', array($this, 'add_critical_field_hiding_css'), 1);
+    }
+
+    /**
+     * Add critical field hiding CSS immediately - prevents any flash
+     */
+    public function add_critical_field_hiding_css()
+    {
+        if (is_checkout() && has_block('woocommerce/checkout')) {
+            $settings = self::get_settings();
+            
+            if (empty($settings)) {
+                return;
+            }
+            
+            echo '<style id="wcfm-critical-hide" type="text/css">';
+            echo '/* WCFM Critical Field Hiding - Loaded First */';
+            
+            $sections = array('billing_fields', 'shipping_fields', 'additional_fields');
+            
+            foreach ($sections as $section) {
+                if (isset($settings[$section])) {
+                    foreach ($settings[$section] as $field_key => $field_config) {
+                        if (!isset($field_config['enabled']) || !$field_config['enabled']) {
+                            // Generate comprehensive CSS selectors
+                            $field_base = str_replace(['billing_', 'shipping_'], '', $field_key);
+                            
+                            echo "
+                                /* Hide {$field_key} */
+                                input[name=\"{$field_key}\"],
+                                textarea[name=\"{$field_key}\"],
+                                select[name=\"{$field_key}\"],
+                                input[id=\"{$field_key}\"],
+                                textarea[id=\"{$field_key}\"],
+                                select[id=\"{$field_key}\"],
+                                input[id*=\"{$field_key}\"],
+                                input[name*=\"{$field_key}\"],
+                                input[id*=\"{$field_base}\"],
+                                input[name*=\"{$field_base}\"],
+                                .wc-block-components-text-input:has(input[name=\"{$field_key}\"]),
+                                .wc-block-components-form-row:has(input[name=\"{$field_key}\"]),
+                                .wc-block-components-text-input:has(input[id=\"{$field_key}\"]),
+                                .wc-block-components-form-row:has(input[id=\"{$field_key}\"]),
+                                .wc-block-components-text-input:has(input[id*=\"{$field_base}\"]),
+                                .wc-block-components-form-row:has(input[id*=\"{$field_base}\"]),
+                                .wc-block-components-text-input:has(input[name*=\"{$field_base}\"]),
+                                .wc-block-components-form-row:has(input[name*=\"{$field_base}\"]) {
+                                    display: none !important;
+                                    visibility: hidden !important;
+                                    opacity: 0 !important;
+                                    height: 0 !important;
+                                    overflow: hidden !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    position: absolute !important;
+                                    left: -9999px !important;
+                                    top: -9999px !important;
+                                }
+                            ";
+                        }
+                    }
+                }
+            }
+            
+            // Add helper classes
+            echo '
+                .wcfm-field-hidden {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    height: 0 !important;
+                    overflow: hidden !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    position: absolute !important;
+                    left: -9999px !important;
+                    top: -9999px !important;
+                }
+                
+                .wcfm-field-enabled {
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    position: relative !important;
+                    left: auto !important;
+                    top: auto !important;
+                }
+            ';
+            
+            echo '</style>';
+        }
     }
 
     /**
@@ -94,7 +187,7 @@ class WCFM_Core
                     error_log('[WCFM] Block checkout detected, loading block assets');
                 }
 
-                // Enqueue block-specific styles
+                // Enqueue block-specific styles with high priority
                 wp_enqueue_style(
                     'wcfm-blocks-style',
                     WCFM_PLUGIN_URL . 'assets/css/blocks.css',
@@ -102,16 +195,30 @@ class WCFM_Core
                     WCFM_VERSION
                 );
 
-                // Enqueue block integration script
+                // Enqueue block integration script with high priority
                 wp_enqueue_script(
                     'wcfm-blocks-integration',
                     WCFM_PLUGIN_URL . 'assets/js/blocks-integration.js',
-                    array('wp-hooks', 'wp-data', 'wp-element', 'wcfm-frontend-script'),
+                    array('wcfm-frontend-script'),
                     WCFM_VERSION,
-                    true
+                    false // Load in head for immediate execution
                 );
 
-                // Add block-specific CSS class to body
+                // Localize with field settings for immediate access
+                $field_settings = self::get_frontend_settings();
+                wp_localize_script('wcfm-blocks-integration', 'wcfmBlocksSettings', array(
+                    'fieldSettings' => $field_settings,
+                    'isBlockCheckout' => true,
+                    'strings' => array(
+                        'required_field_error' => __('This field is required.', WCFM_TEXT_DOMAIN),
+                        'invalid_email' => __('Please enter a valid email address.', WCFM_TEXT_DOMAIN),
+                        'invalid_phone' => __('Please enter a valid phone number.', WCFM_TEXT_DOMAIN),
+                    ),
+                    'ajaxUrl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('wcfm_blocks_nonce'),
+                ));
+
+                // Add body class for block checkout
                 add_filter('body_class', function ($classes) {
                     $classes[] = 'wcfm-block-checkout-detected';
                     return $classes;
@@ -121,7 +228,7 @@ class WCFM_Core
                     error_log('[WCFM] Classic checkout detected');
                 }
 
-                // Add classic checkout CSS class to body
+                // Add body class for classic checkout
                 add_filter('body_class', function ($classes) {
                     $classes[] = 'wcfm-classic-checkout-detected';
                     return $classes;
@@ -365,5 +472,100 @@ class WCFM_Core
     public static function is_classic_checkout()
     {
         return is_checkout() && !has_block('woocommerce/checkout');
+    }
+
+    /**
+     * Get disabled fields for immediate CSS hiding
+     */
+    public static function get_disabled_fields()
+    {
+        $settings = self::get_settings();
+        $disabled_fields = array();
+
+        $sections = array('billing_fields', 'shipping_fields', 'additional_fields');
+
+        foreach ($sections as $section) {
+            if (isset($settings[$section])) {
+                foreach ($settings[$section] as $field_key => $field_config) {
+                    if (!isset($field_config['enabled']) || !$field_config['enabled']) {
+                        $disabled_fields[] = $field_key;
+                    }
+                }
+            }
+        }
+
+        return $disabled_fields;
+    }
+
+    /**
+     * Generate CSS selectors for field hiding
+     */
+    public static function generate_field_hide_css($field_key)
+    {
+        $field_base = str_replace(['billing_', 'shipping_'], '', $field_key);
+        
+        $selectors = array(
+            "input[name=\"{$field_key}\"]",
+            "textarea[name=\"{$field_key}\"]",
+            "select[name=\"{$field_key}\"]",
+            "input[id=\"{$field_key}\"]",
+            "textarea[id=\"{$field_key}\"]",
+            "select[id=\"{$field_key}\"]",
+            "input[id*=\"{$field_key}\"]",
+            "input[name*=\"{$field_key}\"]",
+            "input[id*=\"{$field_base}\"]",
+            "input[name*=\"{$field_base}\"]",
+            ".wc-block-components-text-input:has(input[name=\"{$field_key}\"])",
+            ".wc-block-components-form-row:has(input[name=\"{$field_key}\"])",
+            ".wc-block-components-text-input:has(input[id=\"{$field_key}\"])",
+            ".wc-block-components-form-row:has(input[id=\"{$field_key}\"])",
+            ".wc-block-components-text-input:has(input[id*=\"{$field_base}\"])",
+            ".wc-block-components-form-row:has(input[id*=\"{$field_base}\"])",
+            ".wc-block-components-text-input:has(input[name*=\"{$field_base}\"])",
+            ".wc-block-components-form-row:has(input[name*=\"{$field_base}\"])"
+        );
+
+        return implode(',', $selectors);
+    }
+
+    /**
+     * Add inline critical CSS for immediate field hiding
+     */
+    public static function add_inline_critical_css()
+    {
+        if (!is_checkout() || !has_block('woocommerce/checkout')) {
+            return;
+        }
+
+        $disabled_fields = self::get_disabled_fields();
+        
+        if (empty($disabled_fields)) {
+            return;
+        }
+
+        echo '<style id="wcfm-inline-critical">';
+        echo '/* WCFM Inline Critical CSS */';
+        
+        foreach ($disabled_fields as $field_key) {
+            $css_selectors = self::generate_field_hide_css($field_key);
+            echo $css_selectors . ' { display: none !important; visibility: hidden !important; opacity: 0 !important; }';
+        }
+        
+        echo '</style>';
+    }
+
+    /**
+     * Check if we should apply immediate hiding
+     */
+    public static function should_apply_immediate_hiding()
+    {
+        // Only apply on block checkout pages
+        if (!is_checkout() || !has_block('woocommerce/checkout')) {
+            return false;
+        }
+
+        // Check if there are any disabled fields
+        $disabled_fields = self::get_disabled_fields();
+        return !empty($disabled_fields);
     }
 }

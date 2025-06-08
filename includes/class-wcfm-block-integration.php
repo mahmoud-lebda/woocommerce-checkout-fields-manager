@@ -1,6 +1,6 @@
 <?php
 /**
- * WooCommerce Blocks Integration Class - Enhanced with Priority Support
+ * WooCommerce Blocks Integration Class - Enhanced with Immediate Field Hiding
  * 
  * @package WooCommerce_Checkout_Fields_Manager
  */
@@ -64,8 +64,105 @@ class WCFM_Block_Integration {
         // Add custom validation for block checkout
         add_action('woocommerce_store_api_checkout_order_processed', array($this, 'validate_block_checkout_fields'));
         
-        // Add enhanced CSS for field ordering
-        add_action('wp_head', array($this, 'add_field_ordering_css'));
+        // Add CSS for immediate field hiding - CRITICAL FOR PREVENTING FLASHING
+        add_action('wp_head', array($this, 'add_immediate_field_hiding_css'), 1);
+        
+        // Add inline CSS for field ordering
+        add_action('wp_head', array($this, 'add_field_ordering_css'), 5);
+    }
+    
+    /**
+     * Add immediate field hiding CSS - This prevents fields from showing at all
+     */
+    public function add_immediate_field_hiding_css() {
+        if (has_block('woocommerce/checkout')) {
+            $settings = WCFM_Core::get_settings();
+            
+            echo '<style id="wcfm-immediate-hide" type="text/css">';
+            echo '/* WCFM Immediate Field Hiding - Prevents Flash */';
+            
+            // Hide disabled fields immediately using CSS
+            $sections = array('billing_fields', 'shipping_fields', 'additional_fields');
+            
+            foreach ($sections as $section) {
+                if (isset($settings[$section])) {
+                    foreach ($settings[$section] as $field_key => $field_config) {
+                        // Hide disabled fields immediately
+                        if (!isset($field_config['enabled']) || !$field_config['enabled']) {
+                            // Multiple selectors to ensure we catch the field
+                            echo "
+                                input[name=\"{$field_key}\"],
+                                textarea[name=\"{$field_key}\"],
+                                select[name=\"{$field_key}\"],
+                                input[id=\"{$field_key}\"],
+                                textarea[id=\"{$field_key}\"],
+                                select[id=\"{$field_key}\"],
+                                input[id*=\"{$field_key}\"],
+                                input[name*=\"{$field_key}\"],
+                                .wc-block-components-text-input:has(input[name=\"{$field_key}\"]),
+                                .wc-block-components-form-row:has(input[name=\"{$field_key}\"]),
+                                .wc-block-components-text-input:has(input[id=\"{$field_key}\"]),
+                                .wc-block-components-form-row:has(input[id=\"{$field_key}\"]),
+                                .wc-block-components-text-input:has(input[id*=\"{$field_key}\"]),
+                                .wc-block-components-form-row:has(input[id*=\"{$field_key}\"]) {
+                                    display: none !important;
+                                    visibility: hidden !important;
+                                    opacity: 0 !important;
+                                    height: 0 !important;
+                                    overflow: hidden !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                }
+                            ";
+                            
+                            // Also hide based on common patterns
+                            $field_base = str_replace(['billing_', 'shipping_'], '', $field_key);
+                            echo "
+                                .wc-block-components-text-input:has(input[id*=\"{$field_base}\"]),
+                                .wc-block-components-form-row:has(input[id*=\"{$field_base}\"]),
+                                .wc-block-components-text-input:has(input[name*=\"{$field_base}\"]),
+                                .wc-block-components-form-row:has(input[name*=\"{$field_base}\"]) {
+                                    display: none !important;
+                                    visibility: hidden !important;
+                                    opacity: 0 !important;
+                                    height: 0 !important;
+                                    overflow: hidden !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                }
+                            ";
+                        }
+                    }
+                }
+            }
+            
+            // Add general classes for JavaScript to use
+            echo '
+                .wcfm-field-hidden {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    height: 0 !important;
+                    overflow: hidden !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+                
+                .wcfm-field-enabled {
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                }
+                
+                /* Ensure required indicators show properly */
+                .wcfm-field-required label .required {
+                    color: #e74c3c !important;
+                    font-weight: bold !important;
+                }
+            ';
+            
+            echo '</style>';
+        }
     }
     
     /**
@@ -96,26 +193,6 @@ class WCFM_Block_Integration {
                                     -ms-flex-order: {$priority} !important;
                                 }
                             ";
-                            
-                            // Hide disabled fields immediately
-                            if (!isset($field_config['enabled']) || !$field_config['enabled']) {
-                                $css .= "
-                                    input[name=\"{$field_key}\"],
-                                    textarea[name=\"{$field_key}\"],
-                                    select[name=\"{$field_key}\"],
-                                    input[id=\"{$field_key}\"],
-                                    textarea[id=\"{$field_key}\"],
-                                    select[id=\"{$field_key}\"],
-                                    .wc-block-components-text-input:has(input[name=\"{$field_key}\"]),
-                                    .wc-block-components-form-row:has(input[name=\"{$field_key}\"]),
-                                    .wc-block-components-text-input:has(input[id=\"{$field_key}\"]),
-                                    .wc-block-components-form-row:has(input[id=\"{$field_key}\"]) {
-                                        display: none !important;
-                                        visibility: hidden !important;
-                                        opacity: 0 !important;
-                                    }
-                                ";
-                            }
                         }
                     }
                 }
@@ -130,16 +207,6 @@ class WCFM_Block_Integration {
                 .wc-block-checkout__shipping-fields {
                     display: flex !important;
                     flex-direction: column !important;
-                }
-                
-                .wcfm-field-hidden {
-                    display: none !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                }
-                
-                .wcfm-field-enabled {
-                    display: block !important;
                 }
             ";
             

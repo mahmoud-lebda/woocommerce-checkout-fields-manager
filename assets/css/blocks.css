@@ -1,17 +1,34 @@
-/* Simple WooCommerce Checkout Fields Manager - Block Checkout Styles */
+/* Enhanced WooCommerce Checkout Fields Manager - Block Checkout Styles - No Flash */
 
-/* Hide disabled fields */
+/* Critical: Hide disabled fields immediately - prevents any flash */
 .wcfm-field-hidden {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
 }
 
 /* Show enabled fields */
 .wcfm-field-enabled {
     display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
 }
 
 /* Required field indicator */
-.wcfm-field-required label .required {
+.wcfm-field-required label .required,
+.wcfm-field-required .wc-block-components-text-input .required,
+.wcfm-field-required .wc-block-components-form-row .required {
     color: #e74c3c !important;
     font-weight: bold !important;
     margin-left: 3px !important;
@@ -28,13 +45,13 @@
     /* Basic field styling */
 }
 
-/* Debug helper */
-.wcfm-field-enabled {
+/* Debug helper - only in debug mode */
+body.wcfm-debug .wcfm-field-enabled {
     border-left: 3px solid #27ae60 !important;
     padding-left: 10px !important;
 }
 
-.wcfm-field-hidden {
+body.wcfm-debug .wcfm-field-hidden {
     border-left: 3px solid #e74c3c !important;
     opacity: 0.3 !important;
 }
@@ -47,12 +64,26 @@
 }
 
 /* Block-specific overrides */
-.wc-block-checkout .wcfm-field-hidden {
+.wc-block-checkout .wcfm-field-hidden,
+.wp-block-woocommerce-checkout .wcfm-field-hidden {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
 }
 
-.wc-block-checkout .wcfm-field-enabled {
+.wc-block-checkout .wcfm-field-enabled,
+.wp-block-woocommerce-checkout .wcfm-field-enabled {
     display: block !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
 }
 
 /* Make sure required indicators are visible */
@@ -60,4 +91,132 @@
 .wc-block-components-form-row .required {
     color: #e74c3c !important;
     font-weight: bold !important;
+}
+
+/* Ensure flexbox ordering works */
+.wp-block-woocommerce-checkout-billing-address-block .wc-block-components-address-form,
+.wp-block-woocommerce-checkout-shipping-address-block .wc-block-components-address-form,
+.wp-block-woocommerce-checkout-contact-information-block {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Animation for smooth field appearance when enabled dynamically */
+.wcfm-field-enabled {
+    animation: wcfm-fade-in 0.3s ease-in-out;
+}
+
+@keyframes wcfm-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ensure hidden fields stay hidden during animations */
+.wcfm-field-hidden * {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* Additional specific selectors for common field patterns */
+input[name*="billing_"]:not(.wcfm-field-enabled),
+input[name*="shipping_"]:not(.wcfm-field-enabled),
+textarea[name*="billing_"]:not(.wcfm-field-enabled),
+textarea[name*="shipping_"]:not(.wcfm-field-enabled),
+select[name*="billing_"]:not(.wcfm-field-enabled),
+select[name*="shipping_"]:not(.wcfm-field-enabled) {
+    /* These will be overridden by specific field hiding CSS added via PHP */
+}
+
+/* Priority-based ordering support */
+.wcfm-priority-1 { order: 1 !important; }
+.wcfm-priority-2 { order: 2 !important; }
+.wcfm-priority-3 { order: 3 !important; }
+.wcfm-priority-4 { order: 4 !important; }
+.wcfm-priority-5 { order: 5 !important; }
+.wcfm-priority-6 { order: 6 !important; }
+.wcfm-priority-7 { order: 7 !important; }
+.wcfm-priority-8 { order: 8 !important; }
+.wcfm-priority-9 { order: 9 !important; }
+.wcfm-priority-10 { order: 10 !important; }
+.wcfm-priority-11 { order: 11 !important; }
+.wcfm-priority-12 { order: 12 !important; }
+.wcfm-priority-13 { order: 13 !important; }
+.wcfm-priority-14 { order: 14 !important; }
+.wcfm-priority-15 { order: 15 !important; }
+.wcfm-priority-20 { order: 20 !important; }
+.wcfm-priority-30 { order: 30 !important; }
+.wcfm-priority-40 { order: 40 !important; }
+.wcfm-priority-50 { order: 50 !important; }
+.wcfm-priority-60 { order: 60 !important; }
+.wcfm-priority-70 { order: 70 !important; }
+.wcfm-priority-80 { order: 80 !important; }
+.wcfm-priority-90 { order: 90 !important; }
+.wcfm-priority-100 { order: 100 !important; }
+.wcfm-priority-110 { order: 110 !important; }
+
+/* Fallback for browsers that don't support :has() selector */
+@supports not (selector(:has(*))) {
+    /* Add more specific selectors for field hiding */
+    .wc-block-components-text-input input[data-wcfm-hidden="true"],
+    .wc-block-components-form-row input[data-wcfm-hidden="true"],
+    .wc-block-components-text-input textarea[data-wcfm-hidden="true"],
+    .wc-block-components-form-row textarea[data-wcfm-hidden="true"],
+    .wc-block-components-text-input select[data-wcfm-hidden="true"],
+    .wc-block-components-form-row select[data-wcfm-hidden="true"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .wcfm-field-required input,
+    .wcfm-field-required textarea,
+    .wcfm-field-required select {
+        border-left-width: 4px !important;
+    }
+    
+    .wcfm-field-required label .required {
+        font-size: 1.2em !important;
+        font-weight: 900 !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .wcfm-field-enabled {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .wcfm-field-wrapper {
+        margin-bottom: 0.8rem;
+    }
+    
+    .wcfm-field-required label .required {
+        margin-left: 2px !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .wcfm-field-hidden {
+        display: none !important;
+    }
+    
+    .wcfm-field-enabled {
+        display: block !important;
+        page-break-inside: avoid;
+    }
 }

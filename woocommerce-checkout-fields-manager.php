@@ -27,6 +27,116 @@ define('WCFM_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('WCFM_VERSION', '1.0.0');
 define('WCFM_TEXT_DOMAIN', 'woo-checkout-fields-manager');
 
+// Add immediate CSS for field hiding before anything else loads
+add_action('template_redirect', 'wcfm_add_immediate_field_hiding', 1);
+
+/**
+ * Add immediate field hiding CSS to prevent flash
+ */
+function wcfm_add_immediate_field_hiding() {
+    if (is_checkout() && has_block('woocommerce/checkout')) {
+        // Add critical CSS as early as possible
+        add_action('wp_head', 'wcfm_output_critical_css', 1);
+        
+        // Also try to add it even earlier if possible
+        add_action('wp_print_styles', 'wcfm_output_critical_css', 1);
+    }
+}
+
+/**
+ * Output critical CSS for immediate field hiding
+ */
+function wcfm_output_critical_css() {
+    static $css_outputted = false;
+    
+    // Prevent multiple outputs
+    if ($css_outputted) {
+        return;
+    }
+    
+    $settings = get_option('wcfm_settings', array());
+    
+    if (empty($settings)) {
+        return;
+    }
+    
+    echo '<style id="wcfm-critical-no-flash" type="text/css">';
+    echo '/* WCFM Critical CSS - Prevents Field Flash */';
+    
+    $sections = array('billing_fields', 'shipping_fields', 'additional_fields');
+    
+    foreach ($sections as $section) {
+        if (isset($settings[$section])) {
+            foreach ($settings[$section] as $field_key => $field_config) {
+                if (!isset($field_config['enabled']) || !$field_config['enabled']) {
+                    $field_base = str_replace(['billing_', 'shipping_'], '', $field_key);
+                    
+                    echo "
+                        input[name=\"{$field_key}\"],
+                        textarea[name=\"{$field_key}\"],
+                        select[name=\"{$field_key}\"],
+                        input[id=\"{$field_key}\"],
+                        textarea[id=\"{$field_key}\"],
+                        select[id=\"{$field_key}\"],
+                        input[id*=\"{$field_key}\"],
+                        input[name*=\"{$field_key}\"],
+                        input[id*=\"{$field_base}\"],
+                        input[name*=\"{$field_base}\"],
+                        .wc-block-components-text-input:has(input[name=\"{$field_key}\"]),
+                        .wc-block-components-form-row:has(input[name=\"{$field_key}\"]),
+                        .wc-block-components-text-input:has(input[id=\"{$field_key}\"]),
+                        .wc-block-components-form-row:has(input[id=\"{$field_key}\"]),
+                        .wc-block-components-text-input:has(input[id*=\"{$field_base}\"]),
+                        .wc-block-components-form-row:has(input[id*=\"{$field_base}\"]),
+                        .wc-block-components-text-input:has(input[name*=\"{$field_base}\"]),
+                        .wc-block-components-form-row:has(input[name*=\"{$field_base}\"]) {
+                            display: none !important;
+                            visibility: hidden !important;
+                            opacity: 0 !important;
+                            height: 0 !important;
+                            overflow: hidden !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            position: absolute !important;
+                            left: -9999px !important;
+                            top: -9999px !important;
+                        }
+                    ";
+                }
+            }
+        }
+    }
+    
+    // Add utility classes
+    echo '
+        .wcfm-field-hidden {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+        }
+        
+        .wcfm-field-enabled {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+        }
+    ';
+    
+    echo '</style>';
+    
+    $css_outputted = true;
+}
+
 // Declare WooCommerce compatibility
 add_action('before_woocommerce_init', function() {
     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
@@ -85,7 +195,6 @@ class WooCommerce_Checkout_Fields_Manager {
         });
     }
     
-    // باقي الكود كما هو...
     /**
      * Initialize plugin
      */
