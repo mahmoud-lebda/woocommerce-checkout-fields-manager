@@ -1,6 +1,6 @@
 <?php
 /**
- * WooCommerce Blocks Integration Class - Fixed Version
+ * WooCommerce Blocks Integration Class - Enhanced with Priority Support
  * 
  * @package WooCommerce_Checkout_Fields_Manager
  */
@@ -49,20 +49,103 @@ class WCFM_Block_Integration {
         // Hook into block checkout for field modification
         add_action('wp_enqueue_scripts', array($this, 'enqueue_block_scripts'));
         
-        // Hook into Store API for field processing - Use the NEW hook
+        // Hook into Store API for field processing
         add_action('woocommerce_store_api_checkout_update_order_from_request', array($this, 'save_block_checkout_fields'), 10, 2);
         
         // Extend checkout schema for our custom fields
         add_filter('woocommerce_store_api_checkout_schema', array($this, 'extend_checkout_schema'));
         
-        // Use the NEW hook instead of deprecated one
+        // Update order meta for blocks
         add_action('woocommerce_store_api_checkout_update_order_meta', array($this, 'update_order_meta_blocks'), 10, 2);
         
-        // Modify checkout fields for blocks
+        // Modify checkout fields for blocks with priority support
         add_filter('woocommerce_blocks_checkout_fields', array($this, 'modify_block_checkout_fields'), 10, 1);
         
         // Add custom validation for block checkout
         add_action('woocommerce_store_api_checkout_order_processed', array($this, 'validate_block_checkout_fields'));
+        
+        // Add enhanced CSS for field ordering
+        add_action('wp_head', array($this, 'add_field_ordering_css'));
+    }
+    
+    /**
+     * Add CSS for field ordering
+     */
+    public function add_field_ordering_css() {
+        if (has_block('woocommerce/checkout')) {
+            $settings = WCFM_Core::get_settings();
+            $css = '<style id="wcfm-field-ordering">';
+            
+            // Add ordering CSS for each field based on priority
+            $sections = array('billing_fields', 'shipping_fields', 'additional_fields');
+            
+            foreach ($sections as $section) {
+                if (isset($settings[$section])) {
+                    foreach ($settings[$section] as $field_key => $field_config) {
+                        if (isset($field_config['priority'])) {
+                            $priority = intval($field_config['priority']);
+                            
+                            // Add CSS for field ordering
+                            $css .= "
+                                .wc-block-components-text-input:has(input[name=\"{$field_key}\"]),
+                                .wc-block-components-form-row:has(input[name=\"{$field_key}\"]),
+                                .wc-block-components-text-input:has(input[id=\"{$field_key}\"]),
+                                .wc-block-components-form-row:has(input[id=\"{$field_key}\"]) {
+                                    order: {$priority} !important;
+                                    -webkit-order: {$priority} !important;
+                                    -ms-flex-order: {$priority} !important;
+                                }
+                            ";
+                            
+                            // Hide disabled fields immediately
+                            if (!isset($field_config['enabled']) || !$field_config['enabled']) {
+                                $css .= "
+                                    input[name=\"{$field_key}\"],
+                                    textarea[name=\"{$field_key}\"],
+                                    select[name=\"{$field_key}\"],
+                                    input[id=\"{$field_key}\"],
+                                    textarea[id=\"{$field_key}\"],
+                                    select[id=\"{$field_key}\"],
+                                    .wc-block-components-text-input:has(input[name=\"{$field_key}\"]),
+                                    .wc-block-components-form-row:has(input[name=\"{$field_key}\"]),
+                                    .wc-block-components-text-input:has(input[id=\"{$field_key}\"]),
+                                    .wc-block-components-form-row:has(input[id=\"{$field_key}\"]) {
+                                        display: none !important;
+                                        visibility: hidden !important;
+                                        opacity: 0 !important;
+                                    }
+                                ";
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Make parent containers use flexbox for ordering
+            $css .= "
+                .wp-block-woocommerce-checkout-billing-address-block .wc-block-components-address-form,
+                .wp-block-woocommerce-checkout-shipping-address-block .wc-block-components-address-form,
+                .wp-block-woocommerce-checkout-contact-information-block,
+                .wc-block-checkout__billing-fields,
+                .wc-block-checkout__shipping-fields {
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+                
+                .wcfm-field-hidden {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                }
+                
+                .wcfm-field-enabled {
+                    display: block !important;
+                }
+            ";
+            
+            $css .= '</style>';
+            echo $css;
+        }
     }
     
     /**
@@ -156,7 +239,7 @@ class WCFM_Block_Integration {
     }
     
     /**
-     * Modify checkout fields for blocks
+     * Modify checkout fields for blocks with enhanced priority support
      */
     public function modify_block_checkout_fields($fields) {
         $settings = WCFM_Core::get_settings();
@@ -176,11 +259,22 @@ class WCFM_Block_Integration {
             $fields = $this->process_block_fields($fields, $settings['additional_fields'], 'order');
         }
         
+        // Sort fields by priority within each section
+        foreach ($fields as $section_key => $section_fields) {
+            if (is_array($section_fields)) {
+                uasort($fields[$section_key], function($a, $b) {
+                    $a_priority = isset($a['priority']) ? $a['priority'] : 10;
+                    $b_priority = isset($b['priority']) ? $b['priority'] : 10;
+                    return $a_priority - $b_priority;
+                });
+            }
+        }
+        
         return $fields;
     }
     
     /**
-     * Process block fields
+     * Process block fields with enhanced priority handling
      */
     private function process_block_fields($fields, $field_settings, $section) {
         foreach ($field_settings as $field_key => $field_config) {
@@ -215,13 +309,22 @@ class WCFM_Block_Integration {
                 $fields[$section][$field_key]['priority'] = $field_config['priority'];
             }
             
-            // Add hidden class if field should be hidden
-            if (isset($field_config['enabled']) && !$field_config['enabled']) {
-                if (!isset($fields[$section][$field_key]['class'])) {
-                    $fields[$section][$field_key]['class'] = array();
-                }
-                $fields[$section][$field_key]['class'][] = 'wcfm-hidden-field';
+            // Add custom attributes for CSS targeting
+            if (!isset($fields[$section][$field_key]['custom_attributes'])) {
+                $fields[$section][$field_key]['custom_attributes'] = array();
             }
+            
+            $fields[$section][$field_key]['custom_attributes']['data-wcfm-priority'] = isset($field_config['priority']) ? $field_config['priority'] : 10;
+            $fields[$section][$field_key]['custom_attributes']['data-wcfm-field'] = $field_key;
+            
+            // Add classes for styling
+            if (!isset($fields[$section][$field_key]['class'])) {
+                $fields[$section][$field_key]['class'] = array();
+            }
+            
+            $fields[$section][$field_key]['class'][] = 'wcfm-field';
+            $fields[$section][$field_key]['class'][] = 'wcfm-field-' . str_replace('_', '-', $field_key);
+            $fields[$section][$field_key]['class'][] = 'wcfm-priority-' . (isset($field_config['priority']) ? $field_config['priority'] : 10);
         }
         
         return $fields;
@@ -350,7 +453,7 @@ class WCFM_Block_Integration {
     }
     
     /**
-     * Update order meta for blocks - FIXED to handle correct parameters
+     * Update order meta for blocks
      */
     public function update_order_meta_blocks($order, $request = null) {
         // If $request is null, try to get it from global context
@@ -358,7 +461,6 @@ class WCFM_Block_Integration {
             global $wp;
             if (isset($wp->query_vars['rest_route'])) {
                 // We're in a REST request context, but don't have the request object
-                // This is a fallback - log and return
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('[WCFM] update_order_meta_blocks called without request object');
                 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin Tabs Handler
+ * Admin Tabs Handler - Enhanced with Font Awesome
  * 
  * @package WooCommerce_Checkout_Fields_Manager
  */
@@ -40,6 +40,22 @@ class WCFM_Admin_Tabs {
      */
     private function __construct() {
         $this->init_tabs();
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_fontawesome'));
+    }
+    
+    /**
+     * Enqueue Font Awesome
+     */
+    public function enqueue_fontawesome() {
+        // Only load on our plugin pages
+        if (isset($_GET['page']) && $_GET['page'] === 'wcfm-checkout-fields') {
+            wp_enqueue_style(
+                'font-awesome',
+                'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+                array(),
+                '6.4.0'
+            );
+        }
     }
     
     /**
@@ -49,32 +65,32 @@ class WCFM_Admin_Tabs {
         $this->tabs = array(
             'billing' => array(
                 'title' => __('Billing Fields', WCFM_TEXT_DOMAIN),
-                'icon' => 'dashicons-id-alt',
+                'icon' => 'fas fa-user',
                 'callback' => array($this, 'render_billing_fields_tab'),
             ),
             'shipping' => array(
                 'title' => __('Shipping Fields', WCFM_TEXT_DOMAIN),
-                'icon' => 'dashicons-location-alt',
+                'icon' => 'fas fa-shipping-fast',
                 'callback' => array($this, 'render_shipping_fields_tab'),
             ),
             'additional' => array(
                 'title' => __('Additional Fields', WCFM_TEXT_DOMAIN),
-                'icon' => 'dashicons-plus-alt',
+                'icon' => 'fas fa-plus-circle',
                 'callback' => array($this, 'render_additional_fields_tab'),
             ),
             'rules' => array(
                 'title' => __('Product Type Rules', WCFM_TEXT_DOMAIN),
-                'icon' => 'dashicons-admin-settings',
+                'icon' => 'fas fa-cogs',
                 'callback' => array($this, 'render_rules_tab'),
             ),
             'custom' => array(
                 'title' => __('Custom Fields', WCFM_TEXT_DOMAIN),
-                'icon' => 'dashicons-admin-customizer',
+                'icon' => 'fas fa-edit',
                 'callback' => array($this, 'render_custom_fields_tab'),
             ),
             'advanced' => array(
                 'title' => __('Advanced', WCFM_TEXT_DOMAIN),
-                'icon' => 'dashicons-admin-tools',
+                'icon' => 'fas fa-tools',
                 'callback' => array($this, 'render_advanced_tab'),
             ),
         );
@@ -89,7 +105,7 @@ class WCFM_Admin_Tabs {
             <?php foreach ($this->tabs as $tab_key => $tab): ?>
                 <a href="?page=wcfm-checkout-fields&tab=<?php echo esc_attr($tab_key); ?>" 
                    class="nav-tab <?php echo $active_tab === $tab_key ? 'nav-tab-active' : ''; ?>">
-                    <span class="<?php echo esc_attr($tab['icon']); ?>"></span>
+                    <i class="<?php echo esc_attr($tab['icon']); ?>"></i>
                     <?php echo esc_html($tab['title']); ?>
                 </a>
             <?php endforeach; ?>
@@ -130,8 +146,6 @@ class WCFM_Admin_Tabs {
             'billing_email' => array('enabled' => true, 'required' => true, 'priority' => 110),
         );
         
-        include WCFM_PLUGIN_PATH . 'admin/templates/fields-manager.php';
-        // Remove the include line and render directly
         $this->render_fields_table('billing', $default_billing_fields, $billing_fields, $default_labels);
     }
     
@@ -155,8 +169,6 @@ class WCFM_Admin_Tabs {
             'shipping_postcode' => array('enabled' => true, 'required' => true, 'priority' => 90),
         );
         
-        include WCFM_PLUGIN_PATH . 'admin/templates/fields-manager.php';
-        // Remove the include line and render directly
         $this->render_fields_table('shipping', $default_shipping_fields, $shipping_fields, $default_labels);
     }
     
@@ -172,8 +184,6 @@ class WCFM_Admin_Tabs {
             'order_comments' => array('enabled' => true, 'required' => false, 'priority' => 10),
         );
         
-        include WCFM_PLUGIN_PATH . 'admin/templates/fields-manager.php';
-        // Remove the include line and render directly
         $this->render_fields_table('additional', $default_additional_fields, $additional_fields, $default_labels);
     }
     
@@ -187,7 +197,6 @@ class WCFM_Admin_Tabs {
         if (file_exists($template_file)) {
             include $template_file;
         } else {
-            // Fallback rendering if template file doesn't exist
             $this->render_rules_fallback($settings);
         }
     }
@@ -201,7 +210,6 @@ class WCFM_Admin_Tabs {
         if (file_exists($template_file)) {
             include $template_file;
         } else {
-            // Fallback rendering if template file doesn't exist
             $this->render_custom_fields_fallback();
         }
     }
@@ -215,7 +223,6 @@ class WCFM_Admin_Tabs {
         if (file_exists($template_file)) {
             include $template_file;
         } else {
-            // Fallback rendering if template file doesn't exist
             $this->render_advanced_fallback();
         }
     }
@@ -227,10 +234,10 @@ class WCFM_Admin_Tabs {
         $rules = isset($settings['product_type_rules']) ? $settings['product_type_rules'] : array();
         ?>
         <div class="wcfm-rules-manager">
-            <h2><?php _e('Product Type Rules', WCFM_TEXT_DOMAIN); ?></h2>
+            <h2><i class="fas fa-cogs"></i> <?php _e('Product Type Rules', WCFM_TEXT_DOMAIN); ?></h2>
             <p><?php _e('Configure automatic field behavior based on product types in the cart.', WCFM_TEXT_DOMAIN); ?></p>
             
-            <h3><?php _e('Virtual Products', WCFM_TEXT_DOMAIN); ?></h3>
+            <h3><i class="fas fa-cloud"></i> <?php _e('Virtual Products', WCFM_TEXT_DOMAIN); ?></h3>
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php _e('Hide Shipping Fields', WCFM_TEXT_DOMAIN); ?></th>
@@ -244,7 +251,7 @@ class WCFM_Admin_Tabs {
                 </tr>
             </table>
             
-            <h3><?php _e('Downloadable Products', WCFM_TEXT_DOMAIN); ?></h3>
+            <h3><i class="fas fa-download"></i> <?php _e('Downloadable Products', WCFM_TEXT_DOMAIN); ?></h3>
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php _e('Hide Shipping Fields', WCFM_TEXT_DOMAIN); ?></th>
@@ -267,11 +274,11 @@ class WCFM_Admin_Tabs {
     private function render_custom_fields_fallback() {
         ?>
         <div class="wcfm-custom-fields-manager">
-            <h2><?php _e('Custom Fields Management', WCFM_TEXT_DOMAIN); ?></h2>
+            <h2><i class="fas fa-edit"></i> <?php _e('Custom Fields Management', WCFM_TEXT_DOMAIN); ?></h2>
             <p><?php _e('Create, edit, and manage custom checkout fields.', WCFM_TEXT_DOMAIN); ?></p>
             
             <button type="button" id="wcfm-add-custom-field" class="button button-primary">
-                <?php _e('Add Custom Field', WCFM_TEXT_DOMAIN); ?>
+                <i class="fas fa-plus"></i> <?php _e('Add Custom Field', WCFM_TEXT_DOMAIN); ?>
             </button>
             
             <div id="wcfm-custom-fields-list">
@@ -287,11 +294,11 @@ class WCFM_Admin_Tabs {
     private function render_advanced_fallback() {
         ?>
         <div class="wcfm-advanced-settings">
-            <h2><?php _e('Advanced Settings', WCFM_TEXT_DOMAIN); ?></h2>
+            <h2><i class="fas fa-tools"></i> <?php _e('Advanced Settings', WCFM_TEXT_DOMAIN); ?></h2>
             
             <h3><?php _e('Database Tools', WCFM_TEXT_DOMAIN); ?></h3>
             <button type="button" id="wcfm-repair-database" class="button">
-                <?php _e('Repair Database Tables', WCFM_TEXT_DOMAIN); ?>
+                <i class="fas fa-wrench"></i> <?php _e('Repair Database Tables', WCFM_TEXT_DOMAIN); ?>
             </button>
             
             <h3><?php _e('System Information', WCFM_TEXT_DOMAIN); ?></h3>
@@ -317,20 +324,20 @@ class WCFM_Admin_Tabs {
         <div class="wcfm-fields-manager">
             <div class="wcfm-section-header">
                 <h2>
-                    <span class="<?php echo esc_attr($this->tabs[$section]['icon']); ?>"></span>
+                    <i class="<?php echo esc_attr($this->tabs[$section]['icon']); ?>"></i>
                     <?php echo esc_html($this->tabs[$section]['title']) . ' ' . __('Configuration', WCFM_TEXT_DOMAIN); ?>
                 </h2>
                 <p><?php printf(__('Configure which %s fields to show, hide, or make required during checkout.', WCFM_TEXT_DOMAIN), strtolower($this->tabs[$section]['title'])); ?></p>
                 
                 <div class="wcfm-section-actions">
                     <button type="button" class="button wcfm-bulk-enable" data-section="<?php echo esc_attr($section); ?>">
-                        <?php _e('Enable All', WCFM_TEXT_DOMAIN); ?>
+                        <i class="fas fa-eye"></i> <?php _e('Enable All', WCFM_TEXT_DOMAIN); ?>
                     </button>
                     <button type="button" class="button wcfm-bulk-disable" data-section="<?php echo esc_attr($section); ?>">
-                        <?php _e('Disable All', WCFM_TEXT_DOMAIN); ?>
+                        <i class="fas fa-eye-slash"></i> <?php _e('Disable All', WCFM_TEXT_DOMAIN); ?>
                     </button>
                     <button type="button" class="button wcfm-reset-defaults" data-section="<?php echo esc_attr($section); ?>">
-                        <?php _e('Reset to Defaults', WCFM_TEXT_DOMAIN); ?>
+                        <i class="fas fa-undo"></i> <?php _e('Reset to Defaults', WCFM_TEXT_DOMAIN); ?>
                     </button>
                 </div>
             </div>
@@ -342,7 +349,7 @@ class WCFM_Admin_Tabs {
                     <thead>
                         <tr>
                             <th class="wcfm-field-sort" width="40">
-                                <span class="dashicons dashicons-menu" title="<?php _e('Drag to reorder', WCFM_TEXT_DOMAIN); ?>"></span>
+                                <i class="fas fa-grip-vertical" title="<?php _e('Drag to reorder', WCFM_TEXT_DOMAIN); ?>"></i>
                             </th>
                             <th class="wcfm-field-name" width="200"><?php _e('Field Key', WCFM_TEXT_DOMAIN); ?></th>
                             <th class="wcfm-field-label"><?php _e('Display Label', WCFM_TEXT_DOMAIN); ?></th>
@@ -381,7 +388,7 @@ class WCFM_Admin_Tabs {
         ?>
         <tr class="wcfm-field-row" data-field="<?php echo esc_attr($field_key); ?>" data-section="<?php echo esc_attr($section); ?>">
             <td class="wcfm-field-sort">
-                <span class="dashicons dashicons-menu wcfm-drag-handle" title="<?php _e('Drag to reorder', WCFM_TEXT_DOMAIN); ?>"></span>
+                <i class="fas fa-grip-vertical wcfm-drag-handle" title="<?php _e('Drag to reorder', WCFM_TEXT_DOMAIN); ?>"></i>
             </td>
             <td class="wcfm-field-name">
                 <strong><?php echo esc_html($field_key); ?></strong>
@@ -424,10 +431,10 @@ class WCFM_Admin_Tabs {
             </td>
             <td class="wcfm-field-actions">
                 <button type="button" class="button button-small wcfm-field-edit" data-field="<?php echo esc_attr($field_key); ?>" title="<?php _e('Edit Field', WCFM_TEXT_DOMAIN); ?>">
-                    <span class="dashicons dashicons-edit"></span>
+                    <i class="fas fa-edit"></i>
                 </button>
                 <button type="button" class="button button-small wcfm-field-reset" data-field="<?php echo esc_attr($field_key); ?>" title="<?php _e('Reset to Default', WCFM_TEXT_DOMAIN); ?>">
-                    <span class="dashicons dashicons-undo"></span>
+                    <i class="fas fa-undo"></i>
                 </button>
             </td>
         </tr>
@@ -444,7 +451,7 @@ class WCFM_Admin_Tabs {
                    id="wcfm-fields-search" 
                    class="wcfm-search-input" 
                    placeholder="<?php _e('Search fields...', WCFM_TEXT_DOMAIN); ?>" />
-            <span class="dashicons dashicons-search wcfm-search-icon"></span>
+            <i class="fas fa-search wcfm-search-icon"></i>
         </div>
         <?php
     }
