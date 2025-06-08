@@ -1,6 +1,6 @@
 <?php
 /**
- * Fields Handler Class
+ * Enhanced Fields Handler Class with Block Checkout Support
  * 
  * @package WooCommerce_Checkout_Fields_Manager
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * WCFM Fields Handler Class
+ * WCFM Fields Handler Class - Enhanced for Blocks
  */
 class WCFM_Fields_Handler {
     
@@ -19,6 +19,11 @@ class WCFM_Fields_Handler {
      * Instance
      */
     private static $instance = null;
+    
+    /**
+     * Is block checkout
+     */
+    private $is_block_checkout = false;
     
     /**
      * Get instance
@@ -41,28 +46,121 @@ class WCFM_Fields_Handler {
      * Initialize
      */
     public function init() {
-        // Hook into WooCommerce checkout fields
+        // Detect checkout type
+        add_action('wp', array($this, 'detect_checkout_type'));
+        
+        // Hook into WooCommerce checkout fields (Classic)
         add_filter('woocommerce_checkout_fields', array($this, 'customize_checkout_fields'), 20);
+        
+        // Hook into WooCommerce Blocks (Block Checkout)
+        add_filter('__experimental_woocommerce_blocks_checkout_update_order_from_request', array($this, 'save_block_checkout_data'), 10, 2);
+        add_filter('woocommerce_store_api_checkout_update_order_from_request', array($this, 'save_block_checkout_data'), 10, 2);
         
         // Handle product type specific rules
         add_action('woocommerce_before_checkout_form', array($this, 'apply_product_type_rules'));
         
-        // Handle field validation
+        // Handle field validation for both checkout types
         add_action('woocommerce_checkout_process', array($this, 'validate_custom_fields'));
+        add_action('woocommerce_store_api_checkout_order_processed', array($this, 'validate_block_checkout_fields'));
         
-        // Save custom field data
+        // Save custom field data for both checkout types
         add_action('woocommerce_checkout_update_order_meta', array($this, 'save_custom_field_data'));
         
         // Display custom fields in order details
         add_action('woocommerce_admin_order_data_after_billing_address', array($this, 'display_custom_fields_in_admin'));
         add_action('woocommerce_order_details_after_order_table', array($this, 'display_custom_fields_in_order'));
+        
+        // Block-specific hooks
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_block_checkout_scripts'));
     }
     
     /**
-     * Customize checkout fields based on settings
+     * Detect checkout type
+     */
+    public function detect_checkout_type() {
+        if (is_checkout()) {
+            $this->is_block_checkout = has_block('woocommerce/checkout');
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[WCFM] Checkout type detected: ' . ($this->is_block_checkout ? 'Block' : 'Classic'));
+            }
+        }
+    }
+    
+    /**
+     * Enqueue block checkout scripts
+     */
+    public function enqueue_block_checkout_scripts() {
+        if ($this->is_block_checkout) {
+            // Enqueue our block checkout JavaScript
+            wp_enqueue_script(
+                'wcfm-block-checkout',
+                WCFM_PLUGIN_URL . 'assets/js/blocks-integration.js',
+                array('wp-hooks', 'wp-data', 'wp-element'),
+                WCFM_VERSION,
+                true
+            );
+            
+            // Pass field settings to JavaScript
+            $field_settings = $this->get_field_settings_for_blocks();
+            wp_localize_script('wcfm-block-checkout', 'wcfmBlocksSettings', array(
+                'fieldSettings' => $field_settings,
+                'isBlockCheckout' => true,
+                'strings' => array(
+                    'required_field_error' => __('This field is required.', WCFM_TEXT_DOMAIN),
+                    'invalid_email' => __('Please enter a valid email address.', WCFM_TEXT_DOMAIN),
+                    'invalid_phone' => __('Please enter a valid phone number.', WCFM_TEXT_DOMAIN),
+                ),
+            ));
+        }
+    }
+    
+    /**
+     * Get field settings formatted for blocks
+     */
+    private function get_field_settings_for_blocks() {
+        $settings = WCFM_Core::get_settings();
+        $formatted_settings = array();
+        
+        // Process billing fields
+        if (isset($settings['billing_fields'])) {
+            foreach ($settings['billing_fields'] as $field_key => $field_config) {
+                $formatted_settings[$field_key] = array_merge($field_config, array(
+                    'section' => 'billing'
+                ));
+            }
+        }
+        
+        // Process shipping fields
+        if (isset($settings['shipping_fields'])) {
+            foreach ($settings['shipping_fields'] as $field_key => $field_config) {
+                $formatted_settings[$field_key] = array_merge($field_config, array(
+                    'section' => 'shipping'
+                ));
+            }
+        }
+        
+        // Process additional fields
+        if (isset($settings['additional_fields'])) {
+            foreach ($settings['additional_fields'] as $field_key => $field_config) {
+                $formatted_settings[$field_key] = array_merge($field_config, array(
+                    'section' => 'additional'
+                ));
+            }
+        }
+        
+        return $formatted_settings;
+    }
+    
+    /**
+     * Customize checkout fields based on settings (Classic Checkout)
      */
     public function customize_checkout_fields($fields) {
         $settings = WCFM_Core::get_settings();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] Customizing checkout fields for classic checkout');
+        }
         
         // Handle billing fields
         if (isset($settings['billing_fields'])) {
@@ -84,6 +182,150 @@ class WCFM_Fields_Handler {
         }
         
         return $fields;
+    }
+    
+    /**
+     * Save block checkout data
+     */
+    public function save_block_checkout_data($order, $request) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] Saving block checkout data for order: ' . $order->get_id());
+        }
+        
+        $settings = WCFM_Core::get_settings();
+        
+        // Get data from different sources in the request
+        $billing_data = $request->get_param('billing_address') ?: array();
+        $shipping_data = $request->get_param('shipping_address') ?: array();
+        $extensions_data = $request->get_param('extensions') ?: array();
+        
+        // Save billing fields
+        if (isset($settings['billing_fields'])) {
+            foreach ($settings['billing_fields'] as $field_key => $field_config) {
+                if (isset($field_config['enabled']) && $field_config['enabled']) {
+                    // Try to get value from billing data
+                    $field_value = null;
+                    $billing_key = str_replace('billing_', '', $field_key);
+                    
+                    if (isset($billing_data[$billing_key])) {
+                        $field_value = sanitize_text_field($billing_data[$billing_key]);
+                    }
+                    
+                    // Also check direct field key
+                    if (empty($field_value) && isset($billing_data[$field_key])) {
+                        $field_value = sanitize_text_field($billing_data[$field_key]);
+                    }
+                    
+                    if (!empty($field_value)) {
+                        $order->update_meta_data($field_key, $field_value);
+                        
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log("[WCFM] Saved billing field {$field_key}: {$field_value}");
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Save shipping fields
+        if (isset($settings['shipping_fields'])) {
+            foreach ($settings['shipping_fields'] as $field_key => $field_config) {
+                if (isset($field_config['enabled']) && $field_config['enabled']) {
+                    // Try to get value from shipping data
+                    $field_value = null;
+                    $shipping_key = str_replace('shipping_', '', $field_key);
+                    
+                    if (isset($shipping_data[$shipping_key])) {
+                        $field_value = sanitize_text_field($shipping_data[$shipping_key]);
+                    }
+                    
+                    // Also check direct field key
+                    if (empty($field_value) && isset($shipping_data[$field_key])) {
+                        $field_value = sanitize_text_field($shipping_data[$field_key]);
+                    }
+                    
+                    if (!empty($field_value)) {
+                        $order->update_meta_data($field_key, $field_value);
+                        
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log("[WCFM] Saved shipping field {$field_key}: {$field_value}");
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Save additional fields from extensions
+        if (isset($extensions_data['wcfm']) && is_array($extensions_data['wcfm'])) {
+            foreach ($extensions_data['wcfm'] as $field_key => $field_value) {
+                if (!empty($field_value)) {
+                    $order->update_meta_data($field_key, sanitize_text_field($field_value));
+                    
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("[WCFM] Saved additional field {$field_key}: {$field_value}");
+                    }
+                }
+            }
+        }
+        
+        return $order;
+    }
+    
+    /**
+     * Validate block checkout fields
+     */
+    public function validate_block_checkout_fields($order) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] Validating block checkout fields for order: ' . $order->get_id());
+        }
+        
+        $settings = WCFM_Core::get_settings();
+        $errors = array();
+        
+        // Validate billing fields
+        if (isset($settings['billing_fields'])) {
+            foreach ($settings['billing_fields'] as $field_key => $field_config) {
+                if (isset($field_config['enabled']) && $field_config['enabled'] && 
+                    isset($field_config['required']) && $field_config['required']) {
+                    
+                    $field_value = $order->get_meta($field_key);
+                    
+                    if (empty($field_value)) {
+                        $labels = WCFM_Core::get_default_field_labels();
+                        $field_label = isset($labels[$field_key]) ? $labels[$field_key] : $field_key;
+                        $errors[] = sprintf(__('%s is a required field.', WCFM_TEXT_DOMAIN), $field_label);
+                    }
+                }
+            }
+        }
+        
+        // Validate shipping fields
+        if (isset($settings['shipping_fields'])) {
+            foreach ($settings['shipping_fields'] as $field_key => $field_config) {
+                if (isset($field_config['enabled']) && $field_config['enabled'] && 
+                    isset($field_config['required']) && $field_config['required']) {
+                    
+                    $field_value = $order->get_meta($field_key);
+                    
+                    if (empty($field_value)) {
+                        $labels = WCFM_Core::get_default_field_labels();
+                        $field_label = isset($labels[$field_key]) ? $labels[$field_key] : $field_key;
+                        $errors[] = sprintf(__('%s is a required field.', WCFM_TEXT_DOMAIN), $field_label);
+                    }
+                }
+            }
+        }
+        
+        // Add errors to WooCommerce notices if any
+        if (!empty($errors)) {
+            foreach ($errors as $error) {
+                wc_add_notice($error, 'error');
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[WCFM] Validation error: ' . $error);
+                }
+            }
+        }
     }
     
     /**
@@ -295,9 +537,13 @@ class WCFM_Fields_Handler {
     }
     
     /**
-     * Validate custom fields
+     * Validate custom fields (Classic Checkout)
      */
     public function validate_custom_fields() {
+        if ($this->is_block_checkout) {
+            return; // Block checkout has its own validation
+        }
+        
         $settings = WCFM_Core::get_settings();
         
         // Validate billing fields
@@ -342,9 +588,13 @@ class WCFM_Fields_Handler {
     }
     
     /**
-     * Save custom field data
+     * Save custom field data (Classic Checkout)
      */
     public function save_custom_field_data($order_id) {
+        if ($this->is_block_checkout) {
+            return; // Block checkout has its own saving mechanism
+        }
+        
         $settings = WCFM_Core::get_settings();
         
         // Save billing field data
@@ -398,7 +648,9 @@ class WCFM_Fields_Handler {
                         
                         if (!empty($field_value)) {
                             $labels = WCFM_Core::get_default_field_labels();
-                            $field_label = isset($labels[$field_key]) ? $labels[$field_key] : ucfirst(str_replace('_', ' ', $field_key));
+                            $field_label = isset($field_config['label']) && !empty($field_config['label']) ? 
+                                          $field_config['label'] : 
+                                          (isset($labels[$field_key]) ? $labels[$field_key] : ucfirst(str_replace('_', ' ', $field_key)));
                             
                             $custom_fields[$field_key] = array(
                                 'label' => $field_label,
@@ -440,7 +692,9 @@ class WCFM_Fields_Handler {
                         
                         if (!empty($field_value)) {
                             $labels = WCFM_Core::get_default_field_labels();
-                            $field_label = isset($labels[$field_key]) ? $labels[$field_key] : ucfirst(str_replace('_', ' ', $field_key));
+                            $field_label = isset($field_config['label']) && !empty($field_config['label']) ? 
+                                          $field_config['label'] : 
+                                          (isset($labels[$field_key]) ? $labels[$field_key] : ucfirst(str_replace('_', ' ', $field_key)));
                             
                             $custom_fields[$field_key] = array(
                                 'label' => $field_label,
@@ -467,5 +721,19 @@ class WCFM_Fields_Handler {
             echo '</table>';
             echo '</section>';
         }
+    }
+    
+    /**
+     * Get checkout type
+     */
+    public function get_checkout_type() {
+        return $this->is_block_checkout ? 'block' : 'classic';
+    }
+    
+    /**
+     * Check if current checkout is block checkout
+     */
+    public function is_block_checkout() {
+        return $this->is_block_checkout;
     }
 }

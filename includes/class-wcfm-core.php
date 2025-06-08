@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Core functionality class
  * 
@@ -13,59 +14,66 @@ if (!defined('ABSPATH')) {
 /**
  * WCFM Core Class
  */
-class WCFM_Core {
-    
+class WCFM_Core
+{
+
     /**
      * Instance
      */
     private static $instance = null;
-    
+
     /**
      * Get instance
      */
-    public static function get_instance() {
+    public static function get_instance()
+    {
         if (null === self::$instance) {
             self::$instance = new self();
         }
         return self::$instance;
     }
-    
+
     /**
      * Constructor
      */
-    private function __construct() {
+    private function __construct()
+    {
         add_action('init', array($this, 'init'));
     }
-    
+
     /**
      * Initialize
      */
-    public function init() {
+    public function init()
+    {
         // Add hooks
         $this->add_hooks();
     }
-    
+
     /**
      * Add hooks
      */
-    private function add_hooks() {
+    private function add_hooks()
+    {
         // Enqueue scripts and styles
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
     }
-    
+
     /**
      * Enqueue frontend assets
      */
-    public function enqueue_frontend_assets() {
+    public function enqueue_frontend_assets()
+    {
         if (is_checkout() || is_wc_endpoint_url('order-pay')) {
+            // Always enqueue base styles and scripts for checkout pages
             wp_enqueue_style(
                 'wcfm-frontend-style',
                 WCFM_PLUGIN_URL . 'assets/css/frontend.css',
                 array(),
                 WCFM_VERSION
             );
-            
+
             wp_enqueue_script(
                 'wcfm-frontend-script',
                 WCFM_PLUGIN_URL . 'assets/js/frontend.js',
@@ -73,34 +81,75 @@ class WCFM_Core {
                 WCFM_VERSION,
                 true
             );
-            
-            // Localize script
+
+            // Localize script with basic data
             wp_localize_script('wcfm-frontend-script', 'wcfm_ajax', array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('wcfm_nonce'),
             ));
+
+            // Enhanced block checkout support
+            if (has_block('woocommerce/checkout')) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[WCFM] Block checkout detected, loading block assets');
+                }
+
+                // Enqueue block-specific styles
+                wp_enqueue_style(
+                    'wcfm-blocks-style',
+                    WCFM_PLUGIN_URL . 'assets/css/blocks.css',
+                    array('wcfm-frontend-style'),
+                    WCFM_VERSION
+                );
+
+                // Enqueue block integration script
+                wp_enqueue_script(
+                    'wcfm-blocks-integration',
+                    WCFM_PLUGIN_URL . 'assets/js/blocks-integration.js',
+                    array('wp-hooks', 'wp-data', 'wp-element', 'wcfm-frontend-script'),
+                    WCFM_VERSION,
+                    true
+                );
+
+                // Add block-specific CSS class to body
+                add_filter('body_class', function ($classes) {
+                    $classes[] = 'wcfm-block-checkout-detected';
+                    return $classes;
+                });
+            } else {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[WCFM] Classic checkout detected');
+                }
+
+                // Add classic checkout CSS class to body
+                add_filter('body_class', function ($classes) {
+                    $classes[] = 'wcfm-classic-checkout-detected';
+                    return $classes;
+                });
+            }
         }
     }
-    
+
     /**
      * Enqueue admin assets
      */
-    public function enqueue_admin_assets($hook) {
+    public function enqueue_admin_assets($hook)
+    {
         // Only load on our plugin pages
         if (strpos($hook, 'wcfm') === false && strpos($hook, 'woocommerce_page_wcfm-checkout-fields') === false) {
             return;
         }
-        
+
         // Enqueue Dashicons for admin pages
         wp_enqueue_style('dashicons');
-        
+
         wp_enqueue_style(
             'wcfm-admin-style',
             WCFM_PLUGIN_URL . 'assets/css/admin.css',
             array('dashicons'),
             WCFM_VERSION
         );
-        
+
         wp_enqueue_script(
             'wcfm-admin-script',
             WCFM_PLUGIN_URL . 'assets/js/admin.js',
@@ -108,7 +157,7 @@ class WCFM_Core {
             WCFM_VERSION,
             true
         );
-        
+
         // Localize script
         wp_localize_script('wcfm-admin-script', 'wcfm_admin', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -122,28 +171,30 @@ class WCFM_Core {
             ),
         ));
     }
-    
+
     /**
      * Get plugin settings
      */
-    public static function get_settings() {
+    public static function get_settings()
+    {
         return get_option('wcfm_settings', array());
     }
-    
+
     /**
      * Update plugin settings
      */
-    public static function update_settings($settings) {
+    public static function update_settings($settings)
+    {
         // Check if database table exists first
         global $wpdb;
         $table_name = $wpdb->prefix . 'wcfm_custom_fields';
         $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name);
-        
+
         if (!$table_exists) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[WCFM Core] Database table missing, attempting to create...');
             }
-            
+
             // Try to create the table
             $plugin_instance = WooCommerce_Checkout_Fields_Manager::get_instance();
             if (method_exists($plugin_instance, 'create_tables')) {
@@ -154,7 +205,7 @@ class WCFM_Core {
                 $method->invoke($plugin_instance);
             }
         }
-        
+
         // Validate settings before saving
         if (!is_array($settings)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -162,75 +213,80 @@ class WCFM_Core {
             }
             return false;
         }
-        
+
         // Get current settings to merge
         $current_settings = self::get_settings();
-        
+
         // Merge with current settings to prevent data loss
         $merged_settings = array_merge($current_settings, $settings);
-        
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[WCFM Core] Updating settings with: ' . print_r($merged_settings, true));
         }
-        
+
         $result = update_option('wcfm_settings', $merged_settings);
-        
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[WCFM Core] Update result: ' . ($result ? 'success' : 'failed'));
-            
+
             if (!$result) {
                 error_log('[WCFM Core] WordPress last error: ' . $wpdb->last_error);
             }
         }
-        
+
         return $result;
     }
-    
+
     /**
      * Get field settings
      */
-    public static function get_field_settings($section = null, $field = null) {
+    public static function get_field_settings($section = null, $field = null)
+    {
         $settings = self::get_settings();
-        
+
         if ($section && $field) {
             return isset($settings[$section][$field]) ? $settings[$section][$field] : array();
         }
-        
+
         if ($section) {
             return isset($settings[$section]) ? $settings[$section] : array();
         }
-        
+
         return $settings;
     }
-    
+
     /**
      * Check if field is enabled
      */
-    public static function is_field_enabled($section, $field) {
+    public static function is_field_enabled($section, $field)
+    {
         $field_settings = self::get_field_settings($section, $field);
         return isset($field_settings['enabled']) ? $field_settings['enabled'] : true;
     }
-    
+
     /**
      * Check if field is required
      */
-    public static function is_field_required($section, $field) {
+    public static function is_field_required($section, $field)
+    {
         $field_settings = self::get_field_settings($section, $field);
         return isset($field_settings['required']) ? $field_settings['required'] : false;
     }
-    
+
     /**
      * Get field priority
      */
-    public static function get_field_priority($section, $field) {
+    public static function get_field_priority($section, $field)
+    {
         $field_settings = self::get_field_settings($section, $field);
         return isset($field_settings['priority']) ? $field_settings['priority'] : 10;
     }
-    
+
     /**
      * Get default field labels
      */
-    public static function get_default_field_labels() {
+    public static function get_default_field_labels()
+    {
         return array(
             'billing_first_name' => __('First Name', WCFM_TEXT_DOMAIN),
             'billing_last_name' => __('Last Name', WCFM_TEXT_DOMAIN),
@@ -255,13 +311,59 @@ class WCFM_Core {
             'order_comments' => __('Order Notes', WCFM_TEXT_DOMAIN),
         );
     }
-    
+
     /**
      * Log debug information
      */
-    public static function log($message, $level = 'info') {
+    public static function log($message, $level = 'info')
+    {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[WCFM] ' . $message);
         }
+    }
+
+    /**
+     * Get frontend settings for JavaScript
+     */
+    public static function get_frontend_settings()
+    {
+        $settings = self::get_settings();
+        $frontend_settings = array();
+
+        // Process all field sections
+        $sections = array('billing_fields', 'shipping_fields', 'additional_fields');
+
+        foreach ($sections as $section) {
+            if (isset($settings[$section])) {
+                foreach ($settings[$section] as $field_key => $field_config) {
+                    $frontend_settings[$field_key] = array(
+                        'enabled' => isset($field_config['enabled']) ? $field_config['enabled'] : true,
+                        'required' => isset($field_config['required']) ? $field_config['required'] : false,
+                        'priority' => isset($field_config['priority']) ? $field_config['priority'] : 10,
+                        'label' => isset($field_config['label']) ? $field_config['label'] : '',
+                        'section' => str_replace('_fields', '', $section),
+                        'validation' => isset($field_config['validation']) ? $field_config['validation'] : array(),
+                    );
+                }
+            }
+        }
+
+        return $frontend_settings;
+    }
+
+    /**
+     * Check if current page has block checkout
+     */
+    public static function is_block_checkout()
+    {
+        return is_checkout() && has_block('woocommerce/checkout');
+    }
+
+    /**
+     * Check if current page has classic checkout
+     */
+    public static function is_classic_checkout()
+    {
+        return is_checkout() && !has_block('woocommerce/checkout');
     }
 }

@@ -449,3 +449,20 @@
     margin-left: 0;
     margin-right: 2%;
 }
+
+/* Import Block Checkout Styles */
+@import url('blocks.css');
+
+/* Block Checkout Detection */
+.wcfm-block-checkout-detected {
+    /* This class is added by JavaScript when block checkout is detected */
+}
+
+/* Enhanced Block Support */
+.wc-block-checkout .wcfm-custom-field {
+    margin-bottom: 1rem;
+}
+
+.wc-block-checkout .wcfm-field-hidden {
+    display: none !important;
+}
