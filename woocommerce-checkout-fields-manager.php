@@ -52,6 +52,13 @@ class WooCommerce_Checkout_Fields_Manager {
      */
     private function __construct() {
         add_action('plugins_loaded', array($this, 'init'));
+        
+        // Load textdomain early but properly
+        add_action('init', array($this, 'load_textdomain'), 1);
+        
+        // Plugin activation/deactivation hooks
+        register_activation_hook(__FILE__, array($this, 'activate'));
+        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
     }
     
     /**
@@ -72,16 +79,17 @@ class WooCommerce_Checkout_Fields_Manager {
         
         // Initialize components
         $this->init_components();
-        
-        // Load textdomain
-        add_action('init', array($this, 'load_textdomain'), 1);
-        
-        // Load textdomain on init
-        add_action('init', array($this, 'load_textdomain'), 1);
-        
-        // Plugin activation/deactivation hooks
-        register_activation_hook(__FILE__, array($this, 'activate'));
-        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+    }
+    
+    /**
+     * Load textdomain
+     */
+    public function load_textdomain() {
+        load_plugin_textdomain(
+            WCFM_TEXT_DOMAIN,
+            false,
+            dirname(plugin_basename(__FILE__)) . '/languages/'
+        );
     }
     
     /**
@@ -140,17 +148,6 @@ class WooCommerce_Checkout_Fields_Manager {
     }
     
     /**
-     * Load textdomain
-     */
-    public function load_textdomain() {
-        load_plugin_textdomain(
-            WCFM_TEXT_DOMAIN,
-            false,
-            dirname(plugin_basename(__FILE__)) . '/languages/'
-        );
-    }
-    
-    /**
      * WooCommerce missing notice
      */
     public function woocommerce_missing_notice() {
@@ -177,45 +174,45 @@ class WooCommerce_Checkout_Fields_Manager {
         // Set default options only if they don't exist
         if (!get_option('wcfm_settings')) {
             $default_options = array(
-            'billing_fields' => array(
-                'billing_first_name' => array('enabled' => true, 'required' => true, 'priority' => 10),
-                'billing_last_name' => array('enabled' => true, 'required' => true, 'priority' => 20),
-                'billing_company' => array('enabled' => true, 'required' => false, 'priority' => 30),
-                'billing_country' => array('enabled' => true, 'required' => true, 'priority' => 40),
-                'billing_address_1' => array('enabled' => true, 'required' => true, 'priority' => 50),
-                'billing_address_2' => array('enabled' => true, 'required' => false, 'priority' => 60),
-                'billing_city' => array('enabled' => true, 'required' => true, 'priority' => 70),
-                'billing_state' => array('enabled' => true, 'required' => true, 'priority' => 80),
-                'billing_postcode' => array('enabled' => true, 'required' => true, 'priority' => 90),
-                'billing_phone' => array('enabled' => true, 'required' => true, 'priority' => 100),
-                'billing_email' => array('enabled' => true, 'required' => true, 'priority' => 110),
-            ),
-            'shipping_fields' => array(
-                'shipping_first_name' => array('enabled' => true, 'required' => true, 'priority' => 10),
-                'shipping_last_name' => array('enabled' => true, 'required' => true, 'priority' => 20),
-                'shipping_company' => array('enabled' => true, 'required' => false, 'priority' => 30),
-                'shipping_country' => array('enabled' => true, 'required' => true, 'priority' => 40),
-                'shipping_address_1' => array('enabled' => true, 'required' => true, 'priority' => 50),
-                'shipping_address_2' => array('enabled' => true, 'required' => false, 'priority' => 60),
-                'shipping_city' => array('enabled' => true, 'required' => true, 'priority' => 70),
-                'shipping_state' => array('enabled' => true, 'required' => true, 'priority' => 80),
-                'shipping_postcode' => array('enabled' => true, 'required' => true, 'priority' => 90),
-            ),
-            'additional_fields' => array(
-                'order_comments' => array('enabled' => true, 'required' => false, 'priority' => 10),
-            ),
-            'product_type_rules' => array(
-                'virtual_products' => array(
-                    'hide_shipping' => true,
-                    'hide_billing_address' => true,
+                'billing_fields' => array(
+                    'billing_first_name' => array('enabled' => true, 'required' => true, 'priority' => 10),
+                    'billing_last_name' => array('enabled' => true, 'required' => true, 'priority' => 20),
+                    'billing_company' => array('enabled' => true, 'required' => false, 'priority' => 30),
+                    'billing_country' => array('enabled' => true, 'required' => true, 'priority' => 40),
+                    'billing_address_1' => array('enabled' => true, 'required' => true, 'priority' => 50),
+                    'billing_address_2' => array('enabled' => true, 'required' => false, 'priority' => 60),
+                    'billing_city' => array('enabled' => true, 'required' => true, 'priority' => 70),
+                    'billing_state' => array('enabled' => true, 'required' => true, 'priority' => 80),
+                    'billing_postcode' => array('enabled' => true, 'required' => true, 'priority' => 90),
+                    'billing_phone' => array('enabled' => true, 'required' => true, 'priority' => 100),
+                    'billing_email' => array('enabled' => true, 'required' => true, 'priority' => 110),
                 ),
-                'downloadable_products' => array(
-                    'hide_shipping' => true,
-                    'hide_billing_address' => true,
+                'shipping_fields' => array(
+                    'shipping_first_name' => array('enabled' => true, 'required' => true, 'priority' => 10),
+                    'shipping_last_name' => array('enabled' => true, 'required' => true, 'priority' => 20),
+                    'shipping_company' => array('enabled' => true, 'required' => false, 'priority' => 30),
+                    'shipping_country' => array('enabled' => true, 'required' => true, 'priority' => 40),
+                    'shipping_address_1' => array('enabled' => true, 'required' => true, 'priority' => 50),
+                    'shipping_address_2' => array('enabled' => true, 'required' => false, 'priority' => 60),
+                    'shipping_city' => array('enabled' => true, 'required' => true, 'priority' => 70),
+                    'shipping_state' => array('enabled' => true, 'required' => true, 'priority' => 80),
+                    'shipping_postcode' => array('enabled' => true, 'required' => true, 'priority' => 90),
                 ),
-            ),
-        );
-        
+                'additional_fields' => array(
+                    'order_comments' => array('enabled' => true, 'required' => false, 'priority' => 10),
+                ),
+                'product_type_rules' => array(
+                    'virtual_products' => array(
+                        'hide_shipping' => true,
+                        'hide_billing_address' => true,
+                    ),
+                    'downloadable_products' => array(
+                        'hide_shipping' => true,
+                        'hide_billing_address' => true,
+                    ),
+                ),
+            );
+            
             add_option('wcfm_settings', $default_options);
         }
         
@@ -281,6 +278,21 @@ class WooCommerce_Checkout_Fields_Manager {
         
         return true;
     }
+    
+    /**
+     * Manual database repair function - can be called externally
+     */
+    public static function manual_database_repair() {
+        $instance = self::get_instance();
+        return $instance->create_tables();
+    }
+}
+
+/**
+ * Global function for manual database repair
+ */
+function wcfm_manual_database_repair() {
+    return WooCommerce_Checkout_Fields_Manager::manual_database_repair();
 }
 
 // Initialize plugin

@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin AJAX Handler
+ * Admin AJAX Handler - Enhanced with proper database repair
  * 
  * @package WooCommerce_Checkout_Fields_Manager
  */
@@ -42,6 +42,102 @@ class WCFM_Admin_Ajax {
         add_action('wp_ajax_wcfm_save_field_order', array($this, 'save_field_order_ajax'));
         add_action('wp_ajax_wcfm_repair_database', array($this, 'repair_database_ajax'));
         add_action('wp_ajax_wcfm_check_database', array($this, 'check_database_ajax'));
+    }
+    
+    /**
+     * Repair database via AJAX - Enhanced version
+     */
+    public function repair_database_ajax() {
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] Repair database AJAX called');
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'wcfm_admin_nonce')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[WCFM] Nonce verification failed in repair_database_ajax');
+            }
+            wp_send_json_error(__('Security check failed.', WCFM_TEXT_DOMAIN));
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_woocommerce')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[WCFM] User does not have manage_woocommerce capability');
+            }
+            wp_send_json_error(__('You do not have sufficient permissions.', WCFM_TEXT_DOMAIN));
+        }
+        
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'wcfm_custom_fields';
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] Attempting to create table: ' . $table_name);
+        }
+        
+        $sql = "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            field_key varchar(100) NOT NULL,
+            field_type varchar(50) NOT NULL,
+            field_section varchar(50) NOT NULL,
+            field_label varchar(255) NOT NULL,
+            field_placeholder varchar(255) DEFAULT '',
+            field_options text,
+            field_enabled tinyint(1) DEFAULT 1,
+            field_required tinyint(1) DEFAULT 0,
+            field_priority int(11) DEFAULT 10,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY field_key (field_key)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        $result = dbDelta($sql);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] dbDelta result: ' . print_r($result, true));
+        }
+        
+        // Update version
+        update_option('wcfm_db_version', WCFM_VERSION);
+        
+        // Check if table was created successfully
+        $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCFM] Table exists after creation attempt: ' . ($table_exists ? 'YES' : 'NO'));
+            if (!$table_exists && $wpdb->last_error) {
+                error_log('[WCFM] MySQL error: ' . $wpdb->last_error);
+            }
+        }
+        
+        if ($table_exists) {
+            // Try to insert a test record to verify table is working
+            $test_insert = $wpdb->insert(
+                $table_name,
+                array(
+                    'field_key' => 'test_field_' . time(),
+                    'field_type' => 'text',
+                    'field_section' => 'billing',
+                    'field_label' => 'Test Field',
+                    'field_enabled' => 0
+                ),
+                array('%s', '%s', '%s', '%s', '%d')
+            );
+            
+            if ($test_insert) {
+                // Remove test record
+                $wpdb->delete($table_name, array('field_key' => 'test_field_' . time()), array('%s'));
+                wp_send_json_success(__('Database tables repaired successfully! Table is working properly.', WCFM_TEXT_DOMAIN));
+            } else {
+                wp_send_json_error(__('Database table created but insert test failed. Error: ', WCFM_TEXT_DOMAIN) . $wpdb->last_error);
+            }
+        } else {
+            wp_send_json_error(__('Failed to create database table. Error: ', WCFM_TEXT_DOMAIN) . $wpdb->last_error);
+        }
     }
     
     /**
@@ -340,55 +436,6 @@ class WCFM_Admin_Ajax {
     }
     
     /**
-     * Repair database via AJAX
-     */
-    public function repair_database_ajax() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'wcfm_admin_nonce')) {
-            wp_send_json_error(__('Security check failed.', WCFM_TEXT_DOMAIN));
-        }
-        
-        // Check permissions
-        if (!current_user_can('manage_woocommerce')) {
-            wp_send_json_error(__('You do not have sufficient permissions.', WCFM_TEXT_DOMAIN));
-        }
-        
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'wcfm_custom_fields';
-        $charset_collate = $wpdb->get_charset_collate();
-        
-        $sql = "CREATE TABLE $table_name (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            field_key varchar(100) NOT NULL,
-            field_type varchar(50) NOT NULL,
-            field_section varchar(50) NOT NULL,
-            field_label varchar(255) NOT NULL,
-            field_placeholder varchar(255) DEFAULT '',
-            field_options text,
-            field_enabled tinyint(1) DEFAULT 1,
-            field_required tinyint(1) DEFAULT 0,
-            field_priority int(11) DEFAULT 10,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY field_key (field_key)
-        ) $charset_collate;";
-        
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
-        
-        // Update version
-        update_option('wcfm_db_version', WCFM_VERSION);
-        
-        // Check if table was created successfully
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name) {
-            wp_send_json_success(__('Database tables repaired successfully!', WCFM_TEXT_DOMAIN));
-        } else {
-            wp_send_json_error(__('Failed to create database table.', WCFM_TEXT_DOMAIN));
-        }
-    }
-    
-    /**
      * Check database status via AJAX
      */
     public function check_database_ajax() {
@@ -417,6 +464,15 @@ class WCFM_Admin_Ajax {
         
         if ($table_exists) {
             $status['custom_fields_count'] = absint($wpdb->get_var("SELECT COUNT(*) FROM $table_name"));
+            
+            // Test table functionality
+            $test_query = $wpdb->get_results("DESCRIBE $table_name", ARRAY_A);
+            $status['table_columns'] = count($test_query);
+            $status['table_functional'] = !empty($test_query);
+        } else {
+            $status['custom_fields_count'] = 0;
+            $status['table_columns'] = 0;
+            $status['table_functional'] = false;
         }
         
         wp_send_json_success($status);
